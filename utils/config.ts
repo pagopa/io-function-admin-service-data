@@ -31,13 +31,25 @@ export const IDecodableConfigPostgreSQL = t.interface({
   DB_USER: NonEmptyString
 });
 
+// Environment configuration to connect to IO APIM instance
+//   needed in order to query API Subscription Keys
+export type IDecodableConfigAPIM = t.TypeOf<typeof IDecodableConfigAPIM>;
+export const IDecodableConfigAPIM = t.interface({
+  APIM_CLIENT_ID: NonEmptyString,
+  APIM_RESOURCE_GROUP: NonEmptyString,
+  APIM_SECRET: NonEmptyString,
+  APIM_SERVICE_NAME: NonEmptyString,
+  APIM_SUBSCRIPTION_ID: NonEmptyString,
+  APIM_TENANT_ID: NonEmptyString
+});
+
 // global app configuration
 export type IConfig = t.TypeOf<typeof IConfig>;
 // eslint-disable-next-line @typescript-eslint/ban-types
 
 export const IConfig = t.intersection([
   IDecodableConfigPostgreSQL,
-
+  IDecodableConfigAPIM,
   t.interface({
     AzureWebJobsStorage: NonEmptyString,
 
