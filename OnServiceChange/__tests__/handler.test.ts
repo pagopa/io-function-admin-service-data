@@ -18,6 +18,7 @@ import {
 } from "../../utils/config";
 import OnServiceChangeHandler, {
   getApimOwnerIdBySubscriptionId,
+  getApimUserBySubscriptionResponse,
   mapDataToTableRow,
   parseOwnerIdFullPath
 } from "../handler";
@@ -160,6 +161,25 @@ describe("getApimOwnerIdBySubscriptionId", () => {
     if (isRight(res)) {
       expect(res.right).toHaveProperty("subscriptionId");
       expect(res.right).toHaveProperty("ownerId");
+    }
+  });
+});
+
+describe("getApimUserBySubscriptionResponse", () => {
+  it("should have valid properties for Organization", async () => {
+    const apim = (mockApim as unknown) as IApimConfig;
+    const res = await getApimUserBySubscriptionResponse(
+      apim,
+      mockApimSubscriptionResponse
+    )();
+    expect(isRight(res)).toBe(true);
+    if (isRight(res)) {
+      expect(res.right).toHaveProperty("id");
+      expect(res.right).toHaveProperty("firstName");
+      expect(res.right).toHaveProperty("lastName");
+      expect(res.right).toHaveProperty("email");
+      expect(res.right).toHaveProperty("note");
+      expect(res.right).toHaveProperty("kind");
     }
   });
 });

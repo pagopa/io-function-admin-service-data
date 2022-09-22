@@ -14,12 +14,15 @@ import { IDecodableConfigPostgreSQL } from "../utils/config";
 import {
   ApimDelegateUserResponse,
   ApimSubscriptionResponse,
+  ApimUserResponse,
   IApimConfig
 } from "../models/DomainApim";
 import {
   IApimSubError,
+  IApimUserError,
   toApimSubError,
-  toApimSubErrorMessage
+  toApimSubErrorMessage,
+  toApimUserError
 } from "../models/DomainErrors";
 type Handler = () => Promise<void>;
 
@@ -83,6 +86,32 @@ export const getApimOwnerIdBySubscriptionId = (
       ownerId,
       subscriptionId
     }))
+  );
+
+export const getApimUserBySubscriptionResponse = (
+  apim: IApimConfig,
+  apimSubscriptionResponse: ApimSubscriptionResponse
+): TE.TaskEither<IApimUserError, ApimUserResponse> =>
+  pipe(
+    TE.tryCatch(
+      () =>
+        apim.client.user.get(
+          apim.config.APIM_RESOURCE_GROUP,
+          apim.config.APIM_SERVICE_NAME,
+          apimSubscriptionResponse.ownerId
+        ),
+      () =>
+        toApimUserError(
+          "The provided subscription identifier is malformed or invalid or occur an Authetication Error."
+        )
+    ),
+    TE.chain(
+      flow(
+        ApimUserResponse.decode,
+        TE.fromEither,
+        TE.mapLeft(() => toApimUserError("Invalid Apim User Response Decode."))
+      )
+    )
   );
 
 export const mapDataToTableRow = (
