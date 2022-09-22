@@ -9,15 +9,21 @@ import {
 import { MigrationRowDataTable } from "../../models/Domain";
 import {
   ApimSubscriptionResponse,
-  ApimDelegateUserResponse
+  ApimDelegateUserResponse,
+  IApimConfig
 } from "../../models/DomainApim";
-import { IDecodableConfigPostgreSQL } from "../../utils/config";
+import {
+  IDecodableConfigAPIM,
+  IDecodableConfigPostgreSQL
+} from "../../utils/config";
 import OnServiceChangeHandler, {
+  getApimOwnerIdBySubscriptionId,
   mapDataToTableRow,
   parseOwnerIdFullPath
 } from "../handler";
 import { createUpsertSql } from "../handler";
 import * as O from "fp-ts/lib/Option";
+import { isRight } from "fp-ts/lib/Either";
 
 const mockSubscriptionId = "00000000000000000000000000" as NonEmptyString;
 const mockOrganizationFiscalCode = "01234567891" as OrganizationFiscalCode;
@@ -47,6 +53,26 @@ const mockMigrationRowDataTable = {
   sourceName: "NomeDelegato" as NonEmptyString,
   sourceSurname: "CognomeDelegato" as NonEmptyString,
   sourceEmail: "email@test.com" as EmailString
+};
+
+const mockApimSubscriptionGet = jest.fn(() =>
+  Promise.resolve(mockApimSubscriptionResponse)
+);
+const mockApimUserGet = jest.fn(() =>
+  Promise.resolve(mockApimDelegateUserReponse)
+);
+
+const mockApimClient = {
+  subscription: {
+    get: mockApimSubscriptionGet
+  },
+  user: {
+    get: mockApimUserGet
+  }
+};
+const mockApim = {
+  config: {} as IDecodableConfigAPIM,
+  client: mockApimClient
 };
 
 describe("Handler", () => {
@@ -119,6 +145,21 @@ describe("parseOwnerIdFullPath", () => {
       expect(parsed.value).toBe(expected);
     } else {
       throw new Error("Expected some value, received other");
+    }
+  });
+});
+
+describe("getApimOwnerIdBySubscriptionId", () => {
+  it("should give a valid userId from a valid subscriptionId", async () => {
+    const apim = (mockApim as unknown) as IApimConfig;
+    const res = await getApimOwnerIdBySubscriptionId(
+      apim,
+      mockSubscriptionId
+    )();
+    expect(isRight(res)).toBe(true);
+    if (isRight(res)) {
+      expect(res.right).toHaveProperty("subscriptionId");
+      expect(res.right).toHaveProperty("ownerId");
     }
   });
 });
