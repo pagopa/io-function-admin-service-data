@@ -1,8 +1,49 @@
 import { Context } from "@azure/functions";
+import { RetrievedService } from "@pagopa/io-functions-commons/dist/src/models/service";
+import { NonNegativeInteger } from "@pagopa/ts-commons/lib/numbers";
+import {
+  EmailString,
+  NonEmptyString,
+  OrganizationFiscalCode
+} from "@pagopa/ts-commons/lib/strings";
 import { MigrationRowDataTable } from "../../models/Domain";
+import {
+  ApimSubscriptionResponse,
+  ApimDelegateUserResponse
+} from "../../models/DomainApim";
 import { IDecodableConfigPostgreSQL } from "../../utils/config";
-import OnServiceChangeHandler from "../handler";
+import OnServiceChangeHandler, { mapDataToTableRow } from "../handler";
 import { createUpsertSql } from "../handler";
+
+const mockSubscriptionId = "00000000000000000000000000" as NonEmptyString;
+const mockOrganizationFiscalCode = "01234567891" as OrganizationFiscalCode;
+const mockOwnerId = "/subscriptions/subid/resourceGroups/resourceGroupName/providers/Microsoft.ApiManagement/service/apimServiceName/users/00000000000000000000000000" as NonEmptyString;
+
+const mockRetrieveDocument = {
+  isVisible: true,
+  serviceId: mockSubscriptionId,
+  organizationFiscalCode: mockOrganizationFiscalCode,
+  version: 0 as NonNegativeInteger
+} as RetrievedService;
+const mockApimSubscriptionResponse = {
+  subscriptionId: mockSubscriptionId,
+  ownerId: mockOwnerId
+} as ApimSubscriptionResponse;
+const mockApimDelegateUserReponse = {
+  id: mockOwnerId,
+  firstName: "NomeDelegato" as NonEmptyString,
+  lastName: "CognomeDelegato" as NonEmptyString,
+  email: "email@test.com" as EmailString
+} as ApimDelegateUserResponse;
+const mockMigrationRowDataTable = {
+  isVisible: true,
+  subscriptionId: mockSubscriptionId,
+  organizationFiscalCode: mockOrganizationFiscalCode,
+  sourceId: mockOwnerId,
+  sourceName: "NomeDelegato" as NonEmptyString,
+  sourceSurname: "CognomeDelegato" as NonEmptyString,
+  sourceEmail: "email@test.com" as EmailString
+};
 
 describe("Handler", () => {
   it("should return a Function", async () => {
@@ -35,5 +76,16 @@ describe("createUpsertSql", () => {
 
     const sql = createUpsertSql(config)(data);
     expect(sql.trim()).toBe(expected.trim());
+  });
+});
+
+describe("mapDataToTableRow", () => {
+  it("should create a valida data structure", () => {
+    const res = mapDataToTableRow(mockRetrieveDocument, {
+      apimUser: mockApimDelegateUserReponse,
+      apimSubscription: mockApimSubscriptionResponse
+    });
+
+    expect(res).toMatchObject(mockMigrationRowDataTable);
   });
 });
