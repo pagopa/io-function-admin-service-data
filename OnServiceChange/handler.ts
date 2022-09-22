@@ -1,5 +1,8 @@
 import { pipe } from "fp-ts/lib/function";
+import * as E from "fp-ts/lib/Either";
+import * as O from "fp-ts/lib/Option";
 import * as T from "fp-ts/lib/Task";
+import * as RA from "fp-ts/lib/ReadonlyArray";
 import { Context } from "@azure/functions";
 import knex from "knex";
 import { NonEmptyString } from "@pagopa/ts-commons/lib/strings";
@@ -12,6 +15,30 @@ import {
 } from "../models/DomainApim";
 
 type Handler = () => Promise<void>;
+
+/*
+ ** The right full path for ownerID is in this kind of format:
+ ** "/subscriptions/subid/resourceGroups/{resourceGroup}/providers/Microsoft.ApiManagement/service/{apimService}/users/5931a75ae4bbd512a88c680b",
+ ** resouce link: https://docs.microsoft.com/en-us/rest/api/apimanagement/current-ga/subscription/get
+ */
+export const parseOwnerIdFullPath = (
+  fullPath: NonEmptyString
+): O.Option<NonEmptyString> =>
+  pipe(
+    fullPath,
+    f => f.split("/"),
+    O.fromPredicate(a => a.length === 11),
+    O.chain(splittedPath =>
+      pipe(
+        splittedPath,
+        RA.last,
+        O.chain(s => {
+          const decoded = NonEmptyString.decode(s);
+          return E.isRight(decoded) ? O.some(decoded.right) : O.none;
+        })
+      )
+    )
+  );
 
 export const mapDataToTableRow = (
   retrievedDocument: RetrievedService,

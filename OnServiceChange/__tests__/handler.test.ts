@@ -12,8 +12,12 @@ import {
   ApimDelegateUserResponse
 } from "../../models/DomainApim";
 import { IDecodableConfigPostgreSQL } from "../../utils/config";
-import OnServiceChangeHandler, { mapDataToTableRow } from "../handler";
+import OnServiceChangeHandler, {
+  mapDataToTableRow,
+  parseOwnerIdFullPath
+} from "../handler";
 import { createUpsertSql } from "../handler";
+import * as O from "fp-ts/lib/Option";
 
 const mockSubscriptionId = "00000000000000000000000000" as NonEmptyString;
 const mockOrganizationFiscalCode = "01234567891" as OrganizationFiscalCode;
@@ -87,5 +91,34 @@ describe("mapDataToTableRow", () => {
     });
 
     expect(res).toMatchObject(mockMigrationRowDataTable);
+  });
+});
+
+describe("parseOwnerIdFullPath", () => {
+  it("should return None for an empyy path", async () => {
+    const fullPath = "" as NonEmptyString;
+    const parsed = parseOwnerIdFullPath(fullPath);
+    expect(O.isNone(parsed)).toBe(true);
+  });
+  it("should return None for an invalid path", async () => {
+    const fullPath = "This\\IsAnInvalid\\Path" as NonEmptyString;
+    const parsed = parseOwnerIdFullPath(fullPath);
+    expect(O.isNone(parsed)).toBe(true);
+  });
+  it("should return None for a malformed path", async () => {
+    const fullPath = "/subscriptions/subid/resourceGroups/providers/Microsoft.ApiManagement/service/users/5931a75ae4bbd512a88c680b" as NonEmptyString;
+    const parsed = parseOwnerIdFullPath(fullPath);
+    expect(O.isNone(parsed)).toBe(true);
+  });
+  it("should return Some for a valid path", async () => {
+    const fullPath = "/subscriptions/subid/resourceGroups/resourceGroupName/providers/Microsoft.ApiManagement/service/apimServiceName/users/5931a75ae4bbd512a88c680b" as NonEmptyString;
+    const expected = "5931a75ae4bbd512a88c680b";
+    const parsed = parseOwnerIdFullPath(fullPath);
+    expect(O.isSome(parsed)).toBe(true);
+    if (O.isSome(parsed)) {
+      expect(parsed.value).toBe(expected);
+    } else {
+      throw new Error("Expected some value, received other");
+    }
   });
 });
