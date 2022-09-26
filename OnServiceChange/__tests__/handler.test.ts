@@ -1,4 +1,3 @@
-import { Context } from "@azure/functions";
 import { RetrievedService } from "@pagopa/io-functions-commons/dist/src/models/service";
 import { NonNegativeInteger } from "@pagopa/ts-commons/lib/numbers";
 import {
@@ -76,6 +75,38 @@ const mockApimClient = {
 const mockApim = {
   config: {} as IDecodableConfigAPIM,
   client: mockApimClient
+};
+
+const mockDocuments = [
+  {
+    subscriptionId: "00000000000000000000000000" as NonEmptyString,
+    organizationFiscalCode: "11111111111" as OrganizationFiscalCode,
+    serviceName: "Service Test 1 " as NonEmptyString
+  },
+  {
+    subscriptionId: "00000000000000000000000001" as NonEmptyString,
+    organizationFiscalCode: "00000000000" as OrganizationFiscalCode,
+    serviceName: "Service Test 2.1" as NonEmptyString
+  },
+  {
+    subscriptionI: "00000000000000000000000002" as NonEmptyString,
+    organizationFiscalCode: "00000000000" as OrganizationFiscalCode,
+    serviceName: "Service Test 2.2" as NonEmptyString
+  }
+];
+const mockConfig = {};
+const mockQueryResult = {
+  command: "INSERT",
+  rowCount: 1
+} as QueryResult;
+const mockPool = {
+  connect: jest.fn().mockImplementation(() =>
+    Promise.resolve({
+      query: jest
+        .fn()
+        .mockImplementation(() => Promise.resolve(mockQueryResult))
+    })
+  )
 };
 
 describe("Handler", () => {
@@ -186,37 +217,6 @@ describe("getApimUserBySubscriptionResponse", () => {
   });
 });
 
-const mockDocuments = [
-  {
-    subscriptionId: "00000000000000000000000000" as NonEmptyString,
-    organizationFiscalCode: "11111111111" as OrganizationFiscalCode,
-    serviceName: "Service Test 1 " as NonEmptyString
-  },
-  {
-    subscriptionId: "00000000000000000000000001" as NonEmptyString,
-    organizationFiscalCode: "00000000000" as OrganizationFiscalCode,
-    serviceName: "Service Test 2.1" as NonEmptyString
-  },
-  {
-    subscriptionI: "00000000000000000000000002" as NonEmptyString,
-    organizationFiscalCode: "00000000000" as OrganizationFiscalCode,
-    serviceName: "Service Test 2.2" as NonEmptyString
-  }
-];
-const mockConfig = {};
-const mockQueryResult = {
-  command: "INSERT",
-  rowCount: 1
-} as QueryResult;
-const mockPool = {
-  connect: jest.fn().mockImplementation(() =>
-    Promise.resolve({
-      query: jest
-        .fn()
-        .mockImplementation(() => Promise.resolve(mockQueryResult))
-    })
-  )
-};
 describe("storeDocumentApimToDatabase", () => {
   it("should insert a valid document from Delegate", async () => {
     const apim = (mockApim as unknown) as IApimConfig;
