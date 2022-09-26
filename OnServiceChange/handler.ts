@@ -1,10 +1,8 @@
 import { flow, pipe } from "fp-ts/lib/function";
 import * as E from "fp-ts/lib/Either";
 import * as O from "fp-ts/lib/Option";
-import * as T from "fp-ts/lib/Task";
 import * as TE from "fp-ts/lib/TaskEither";
 import * as RA from "fp-ts/lib/ReadonlyArray";
-import { Context } from "@azure/functions";
 import knex from "knex";
 import { NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { RetrievedService } from "@pagopa/io-functions-commons/dist/src/models/service";
@@ -27,8 +25,6 @@ import {
   toPostgreSQLError
 } from "../models/DomainErrors";
 import { queryDataTable } from "../utils/db";
-
-type Handler = () => Promise<void>;
 
 /*
  ** The right full path for ownerID is in this kind of format:
@@ -197,15 +193,30 @@ export const storeDocumentApimToDatabase = (
   );
 
 // TO DO: This is the Handler and it's to be implemented!
-const handler = (): Handler =>
+const handler = (
+  config: IConfig,
+  apimClient: IApimConfig,
+  pool: Pool
+) => async (document: RetrievedService): Promise<void> =>
   pipe(
-    T.of(void 0),
-    T.map(_ => void 0)
-  );
+    document,
+    storeDocumentApimToDatabase(apimClient, config, pool),
+    TE.map(_ => void 0 /* we expect no return */),
+    // let the handler fail
+    TE.getOrElse(err => {
+      throw err;
+    })
+  )();
 
-const OnServiceChangeHandler = () => (
-  _context: Context,
-  _documents: ReadonlyArray<unknown>
-): Handler => pipe(handler());
+const OnServiceChangeHandler = (
+  config: IConfig,
+  apimClient: IApimConfig,
+  pool: Pool
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+) => async (documents: ReadonlyArray<RetrievedService>): Promise<any> =>
+  pipe(
+    Array.isArray(documents) ? documents : [documents],
+    RA.map(d => handler(config, apimClient, pool)(d))
+  );
 
 export default OnServiceChangeHandler;

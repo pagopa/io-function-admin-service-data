@@ -111,11 +111,14 @@ const mockPool = {
 
 describe("Handler", () => {
   it("should return a Function", async () => {
-    const handler = await OnServiceChangeHandler()(
-      (void 0 as unknown) as Context,
-      (void 0 as unknown) as any
-    );
-    expect(handler).toBeInstanceOf(Function);
+    const apim = (mockApim as unknown) as IApimConfig;
+    const mockClientPool = await mockPool.connect();
+    const handler = await OnServiceChangeHandler(
+      mockConfig as any,
+      apim,
+      mockClientPool
+    )((void 0 as unknown) as any);
+    expect(handler).toBeInstanceOf(Array);
   });
 });
 
