@@ -20,11 +20,13 @@ import OnServiceChangeHandler, {
   getApimOwnerIdBySubscriptionId,
   getApimUserBySubscriptionResponse,
   mapDataToTableRow,
-  parseOwnerIdFullPath
+  parseOwnerIdFullPath,
+  storeDocumentApimToDatabase
 } from "../handler";
 import { createUpsertSql } from "../handler";
 import * as O from "fp-ts/lib/Option";
 import { isRight } from "fp-ts/lib/Either";
+import { QueryResult } from "pg";
 
 const mockSubscriptionId = "00000000000000000000000000" as NonEmptyString;
 const mockOrganizationFiscalCode = "01234567891" as OrganizationFiscalCode;
@@ -180,6 +182,54 @@ describe("getApimUserBySubscriptionResponse", () => {
       expect(res.right).toHaveProperty("email");
       expect(res.right).toHaveProperty("note");
       expect(res.right).toHaveProperty("kind");
+    }
+  });
+});
+
+const mockDocuments = [
+  {
+    subscriptionId: "00000000000000000000000000" as NonEmptyString,
+    organizationFiscalCode: "11111111111" as OrganizationFiscalCode,
+    serviceName: "Service Test 1 " as NonEmptyString
+  },
+  {
+    subscriptionId: "00000000000000000000000001" as NonEmptyString,
+    organizationFiscalCode: "00000000000" as OrganizationFiscalCode,
+    serviceName: "Service Test 2.1" as NonEmptyString
+  },
+  {
+    subscriptionI: "00000000000000000000000002" as NonEmptyString,
+    organizationFiscalCode: "00000000000" as OrganizationFiscalCode,
+    serviceName: "Service Test 2.2" as NonEmptyString
+  }
+];
+const mockConfig = {};
+const mockQueryResult = {
+  command: "INSERT",
+  rowCount: 1
+} as QueryResult;
+const mockPool = {
+  connect: jest.fn().mockImplementation(() =>
+    Promise.resolve({
+      query: jest
+        .fn()
+        .mockImplementation(() => Promise.resolve(mockQueryResult))
+    })
+  )
+};
+describe("storeDocumentApimToDatabase", () => {
+  it("should insert a valid document from Delegate", async () => {
+    const apim = (mockApim as unknown) as IApimConfig;
+    const mockClientPool = await mockPool.connect();
+    const res = await storeDocumentApimToDatabase(
+      apim,
+      mockConfig as any,
+      mockClientPool
+    )(mockDocuments[0] as any)();
+    expect(isRight(res)).toBe(true);
+    if (isRight(res)) {
+      expect(res.right).toHaveProperty("command", "INSERT");
+      expect(res.right).toHaveProperty("rowCount", 1);
     }
   });
 });
