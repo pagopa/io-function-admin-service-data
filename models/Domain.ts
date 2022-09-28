@@ -5,6 +5,7 @@ import {
 } from "@pagopa/ts-commons/lib/strings";
 
 import * as t from "io-ts";
+import { ServicesSearchList } from "../generated/definitions/ServicesSearchList";
 export type MigrationRowDataTable = t.TypeOf<typeof MigrationRowDataTable>;
 export const MigrationRowDataTable = t.interface({
   isVisible: t.boolean,
@@ -18,14 +19,8 @@ export const MigrationRowDataTable = t.interface({
   subscriptionId: NonEmptyString
 });
 
-export type ServiceSearchItem = t.TypeOf<typeof ServiceSearchItem>;
-export const ServiceSearchItem = t.interface({
-  id: NonEmptyString,
-  name: NonEmptyString,
-  visible: t.boolean
+export const ServiceSearchResultSet = t.interface({
+  rowCount: t.number,
+  rows: ServicesSearchList
 });
-
-export type ServicesSearchList = t.TypeOf<typeof ServicesSearchList>;
-export const ServicesSearchList = t.interface({
-  items: t.readonlyArray(ServiceSearchItem)
-});
+export type ServiceSearchResultSet = t.TypeOf<typeof ServiceSearchResultSet>;

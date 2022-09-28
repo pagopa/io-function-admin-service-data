@@ -19,8 +19,9 @@ import {
 } from "@pagopa/ts-commons/lib/strings";
 import { Context } from "@azure/functions";
 import knex from "knex";
-import { ServicesSearchList } from "../models/Domain";
+
 import { IDecodableConfigPostgreSQL } from "../utils/config";
+import { ServicesSearchList } from "../generated/definitions/ServicesSearchList";
 
 type GetServicesSearchListHandler = (
   context: Context,
