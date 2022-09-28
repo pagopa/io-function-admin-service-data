@@ -9,7 +9,8 @@ import {
   IResponseErrorInternal,
   IResponseErrorValidation,
   IResponseSuccessJson,
-  ResponseErrorInternal
+  ResponseErrorInternal,
+  ResponseSuccessJson
 } from "@pagopa/ts-commons/lib/responses";
 import { RequiredParamMiddleware } from "@pagopa/io-functions-commons/dist/src/utils/middlewares/required_param";
 import {
@@ -19,9 +20,18 @@ import {
 } from "@pagopa/ts-commons/lib/strings";
 import { Context } from "@azure/functions";
 import knex from "knex";
-
-import { IDecodableConfigPostgreSQL } from "../utils/config";
+import { Pool } from "pg";
+import * as TE from "fp-ts/lib/TaskEither";
+import { flow, pipe } from "fp-ts/lib/function";
+import { IConfig, IDecodableConfigPostgreSQL } from "../utils/config";
 import { ServicesSearchList } from "../generated/definitions/ServicesSearchList";
+import { ServiceSearchResultSet } from "../models/Domain";
+import {
+  IDbError,
+  toPostgreSQLError,
+  toPostgreSQLErrorMessage
+} from "../models/DomainErrors";
+import { queryDataTable } from "../utils/db";
 
 type GetServicesSearchListHandler = (
   context: Context,
@@ -49,6 +59,29 @@ export const createSqlServices = (dbConfig: IDecodableConfigPostgreSQL) => (
       OrganizationFiscalCode: organizationFiscalCode
     })
     .toQuery() as NonEmptyString;
+
+export const getServices = (config: IConfig, connect: Pool) => (
+  delegateEmail: EmailString,
+  organizationFiscalCode: OrganizationFiscalCode
+): TE.TaskEither<IDbError, ServiceSearchResultSet> =>
+  pipe(
+    createSqlServices(config)(delegateEmail, organizationFiscalCode),
+    sql => queryDataTable(connect, sql),
+    TE.mapLeft(flow(toPostgreSQLErrorMessage, toPostgreSQLError))
+  );
+
+export const processResponseFromResultSet = (
+  resultSet: ServiceSearchResultSet
+): TE.TaskEither<
+  IResponseErrorInternal,
+  IResponseSuccessJson<ServicesSearchList>
+> =>
+  pipe(
+    resultSet,
+    TE.of,
+    TE.mapLeft(() => ResponseErrorInternal("Error on decode")),
+    TE.map(data => ResponseSuccessJson(data.rows))
+  );
 
 const GetServicesSearchListHandler = (): GetServicesSearchListHandler => async (
   context: Context,
