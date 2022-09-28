@@ -14,10 +14,13 @@ import {
 import { RequiredParamMiddleware } from "@pagopa/io-functions-commons/dist/src/utils/middlewares/required_param";
 import {
   EmailString,
+  NonEmptyString,
   OrganizationFiscalCode
 } from "@pagopa/ts-commons/lib/strings";
 import { Context } from "@azure/functions";
+import knex from "knex";
 import { ServicesSearchList } from "../models/Domain";
+import { IDecodableConfigPostgreSQL } from "../utils/config";
 
 type GetServicesSearchListHandler = (
   context: Context,
@@ -29,6 +32,22 @@ type GetServicesSearchListHandler = (
   | IResponseErrorForbiddenNotAuthorized
   | IResponseErrorValidation
 >;
+
+export const createSqlServices = (dbConfig: IDecodableConfigPostgreSQL) => (
+  delegateEmail: EmailString,
+  organizationFiscalCode: OrganizationFiscalCode
+): NonEmptyString =>
+  knex({
+    client: "pg"
+  })
+    .withSchema(dbConfig.DB_SCHEMA)
+    .table(dbConfig.DB_TABLE)
+    .select(["serviceId", "serviceName", "isVisible"])
+    .where({
+      DelegateEmail: delegateEmail,
+      OrganizationFiscalCode: organizationFiscalCode
+    })
+    .toQuery() as NonEmptyString;
 
 const GetServicesSearchListHandler = (): GetServicesSearchListHandler => async (
   context: Context,
