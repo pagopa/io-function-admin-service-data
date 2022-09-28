@@ -17,3 +17,15 @@ export const MigrationRowDataTable = t.interface({
   sourceSurname: NonEmptyString,
   subscriptionId: NonEmptyString
 });
+
+export type ServiceSearchItem = t.TypeOf<typeof ServiceSearchItem>;
+export const ServiceSearchItem = t.interface({
+  id: NonEmptyString,
+  name: NonEmptyString,
+  visible: t.boolean
+});
+
+export type ServicesSearchList = t.TypeOf<typeof ServicesSearchList>;
+export const ServicesSearchList = t.interface({
+  items: t.readonlyArray(ServiceSearchItem)
+});
