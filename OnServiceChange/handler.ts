@@ -192,7 +192,6 @@ export const storeDocumentApimToDatabase = (
     }, TE.of)
   );
 
-// TO DO: This is the Handler and it's to be implemented!
 const handler = (
   config: IConfig,
   apimClient: IApimConfig,
