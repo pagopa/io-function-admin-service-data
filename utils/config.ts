@@ -12,21 +12,56 @@ import { pipe } from "fp-ts/lib/function";
 
 import { readableReport } from "@pagopa/ts-commons/lib/reporters";
 import { NonEmptyString } from "@pagopa/ts-commons/lib/strings";
+import { withDefault } from "@pagopa/ts-commons/lib/types";
+import { NumberFromString } from "@pagopa/ts-commons/lib/numbers";
+
+// Environment configuration to connect to dedicate db instance
+//   needed in order to persist migration data
+export type IDecodableConfigPostgreSQL = t.TypeOf<
+  typeof IDecodableConfigPostgreSQL
+>;
+export const IDecodableConfigPostgreSQL = t.interface({
+  DB_HOST: NonEmptyString,
+  DB_IDLE_TIMEOUT: withDefault(NumberFromString, 30000),
+  DB_NAME: NonEmptyString,
+  DB_PASSWORD: NonEmptyString,
+  DB_PORT: NumberFromString,
+  DB_SCHEMA: NonEmptyString,
+  DB_TABLE: NonEmptyString,
+  DB_USER: NonEmptyString
+});
+
+// Environment configuration to connect to IO APIM instance
+//   needed in order to query API Subscription Keys
+export type IDecodableConfigAPIM = t.TypeOf<typeof IDecodableConfigAPIM>;
+export const IDecodableConfigAPIM = t.interface({
+  APIM_CLIENT_ID: NonEmptyString,
+  APIM_RESOURCE_GROUP: NonEmptyString,
+  APIM_SECRET: NonEmptyString,
+  APIM_SERVICE_NAME: NonEmptyString,
+  APIM_SUBSCRIPTION_ID: NonEmptyString,
+  APIM_TENANT_ID: NonEmptyString
+});
 
 // global app configuration
 export type IConfig = t.TypeOf<typeof IConfig>;
 // eslint-disable-next-line @typescript-eslint/ban-types
-export const IConfig = t.interface({
-  AzureWebJobsStorage: NonEmptyString,
 
-  COSMOSDB_KEY: NonEmptyString,
-  COSMOSDB_NAME: NonEmptyString,
-  COSMOSDB_URI: NonEmptyString,
+export const IConfig = t.intersection([
+  IDecodableConfigPostgreSQL,
+  IDecodableConfigAPIM,
+  t.interface({
+    AzureWebJobsStorage: NonEmptyString,
 
-  QueueStorageConnection: NonEmptyString,
+    COSMOSDB_KEY: NonEmptyString,
+    COSMOSDB_NAME: NonEmptyString,
+    COSMOSDB_URI: NonEmptyString,
 
-  isProduction: t.boolean
-});
+    QueueStorageConnection: NonEmptyString,
+
+    isProduction: t.boolean
+  })
+]);
 
 export const envConfig = {
   ...process.env,

@@ -27,7 +27,10 @@ type InfoHandler = () => Promise<
 
 type HealthChecker = (
   config: unknown
-) => healthcheck.HealthCheck<healthcheck.ProblemSource, true>;
+) => healthcheck.HealthCheck<
+  "AzureCosmosDB" | "AzureStorage" | "APIM" | "PostgresSQL" | "Config",
+  true
+>;
 
 export const InfoHandler = (
   checkApplicationHealth: HealthChecker
