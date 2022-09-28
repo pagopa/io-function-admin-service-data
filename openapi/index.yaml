@@ -31,9 +31,6 @@ paths:
           description: Bad Request
         "401":
           description: Unauthorized
-        "404":
-          description: >-
-            Access data provided are invalid or no row are presents in the database table
         "500":
           description: Generic server error
           schema:
