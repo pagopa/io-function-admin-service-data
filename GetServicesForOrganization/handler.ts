@@ -80,7 +80,7 @@ export const processResponseFromResultSet = (
     resultSet,
     TE.of,
     TE.mapLeft(() => ResponseErrorInternal("Error on decode")),
-    TE.map(data => ResponseSuccessJson(data.rows))
+    TE.map(data => ResponseSuccessJson({ items: data.rows }))
   );
 
 const GetServicesSearchListHandler = (): GetServicesSearchListHandler => async (
