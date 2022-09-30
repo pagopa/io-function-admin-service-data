@@ -1,0 +1,36 @@
+version: "2.2"
+
+services:
+  myapp:
+    build:
+      context: ../../../
+      dockerfile: docker/functions/Dockerfile
+    environment:
+      - NODE_TLS_REJECT_UNAUTHORIZED=0
+    env_file:
+      - env.scenario
+    depends_on:
+      - postgres
+    expose:
+      - ${SERVER_PORT}
+    ports:
+      - ${SERVER_PORT}:7071
+    volumes:
+      - "../../:/usr/src/app/"
+    networks:
+      - integrations-net
+
+  postgres:
+    image: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+networks:
+  integrations-net:
+    driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: 1450
