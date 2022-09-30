@@ -16,7 +16,7 @@ services:
     ports:
       - ${SERVER_PORT}:7071
     volumes:
-      - "../../:/usr/src/app/"
+      - "../../../:/usr/src/app/"
     networks:
       - integrations-net
 
@@ -28,6 +28,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    networks:
+      - integrations-net
 
 networks:
   integrations-net:
