@@ -82,3 +82,22 @@ stages:
         - bash: |
             bash <(curl -s https://codecov.io/bash)
           displayName: 'Code coverage'
+
+
+  - stage: Integrations_Test
+    dependsOn: []
+    jobs:
+      - job: make_build  
+        steps:
+        - template: templates/node-job-setup/template.yaml@pagopaCommons
+        - script: |
+            yarn build
+          displayName: 'Build'
+
+        - script: |
+            set -e
+            cd __integrations__
+            yarn install --frozen-lockfile
+            yarn build
+            yarn start
+          displayName: 'Run integration tests'
