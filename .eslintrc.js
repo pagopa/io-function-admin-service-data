@@ -10,7 +10,8 @@ module.exports = {
       "**/__mocks__/*",
       "*.d.ts",
       "*.js",
-      "Dangerfile.ts"
+      "Dangerfile.ts",
+      "__integrations__"
   ],
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
