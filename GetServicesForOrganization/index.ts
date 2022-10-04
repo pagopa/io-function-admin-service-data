@@ -6,7 +6,7 @@ import { Handler } from "./handler";
 
 const setupExpress = (): express.Express => {
   const app = express();
-  app.get("/api/v1/organization/:organizationFiscalCode", Handler());
+  app.get("/api/v1/organizations/:organizationFiscalCode", Handler());
   return app;
 };
 
