@@ -13,9 +13,12 @@ describe("Basic", () => {
   it("should startup", () => expect(1).toBe(1));
 
   it("should expose with application info ", async () => {
+    const expectedObj = {
+      name: expect.any(String),
+      version: expect.any(String)
+    };
     const response = await fetch(`${myAppHost}/api/v1/info`);
     const info = await response.json();
-
-    expect(info).toEqual({});
+    expect(info).toEqual(expect.objectContaining(expectedObj));
   });
 });
