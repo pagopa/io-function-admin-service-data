@@ -123,6 +123,7 @@ export const mapDataToTableRow = (
 ): MigrationRowDataTable => ({
   isVisible: retrievedDocument.isVisible,
   organizationFiscalCode: retrievedDocument.organizationFiscalCode,
+  requireSecureChannels: retrievedDocument.requireSecureChannels,
   serviceName: retrievedDocument.serviceName || "",
   serviceVersion: retrievedDocument.version,
   sourceEmail: apimData.apimUser.email,

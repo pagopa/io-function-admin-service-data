@@ -33,6 +33,7 @@ const mockOwnerId = "/subscriptions/subid/resourceGroups/resourceGroupName/provi
 
 const mockRetrieveDocument = {
   isVisible: true,
+  requireSecureChannels: true,
   serviceId: mockSubscriptionId,
   organizationFiscalCode: mockOrganizationFiscalCode,
   version: 0 as NonNegativeInteger
@@ -49,6 +50,7 @@ const mockApimDelegateUserReponse = {
 } as ApimDelegateUserResponse;
 const mockMigrationRowDataTable = {
   isVisible: true,
+  requireSecureChannels: true,
   subscriptionId: mockSubscriptionId,
   organizationFiscalCode: mockOrganizationFiscalCode,
   sourceId: mockOwnerId,
@@ -147,7 +149,7 @@ describe("createUpsertSql", () => {
 });
 
 describe("mapDataToTableRow", () => {
-  it("should create a valida data structure", () => {
+  it("should create a valid data structure", () => {
     const res = mapDataToTableRow(mockRetrieveDocument, {
       apimUser: mockApimDelegateUserReponse,
       apimSubscription: mockApimSubscriptionResponse

@@ -9,6 +9,7 @@ export type MigrationRowDataTable = t.TypeOf<typeof MigrationRowDataTable>;
 export const MigrationRowDataTable = t.interface({
   isVisible: t.boolean,
   organizationFiscalCode: OrganizationFiscalCode,
+  requireSecureChannels: t.boolean,
   serviceName: t.string,
   serviceVersion: t.number,
   sourceEmail: EmailString,
