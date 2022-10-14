@@ -121,15 +121,15 @@ export const mapDataToTableRow = (
     readonly apimSubscription: ApimSubscriptionResponse;
   }
 ): MigrationRowDataTable => ({
+  id: retrievedDocument.serviceId,
   isVisible: retrievedDocument.isVisible,
+  name: retrievedDocument.serviceName,
   organizationFiscalCode: retrievedDocument.organizationFiscalCode,
-  serviceName: retrievedDocument.serviceName || "",
   serviceVersion: retrievedDocument.version,
-  sourceEmail: apimData.apimUser.email,
-  sourceId: apimData.apimSubscription.ownerId,
-  sourceName: apimData.apimUser.firstName,
-  sourceSurname: apimData.apimUser.lastName,
-  subscriptionId: retrievedDocument.serviceId
+  subscriptionAccountEmail: apimData.apimUser.email,
+  subscriptionAccountId: apimData.apimSubscription.ownerId,
+  subscriptionAccountName: apimData.apimUser.firstName,
+  subscriptionAccountSurname: apimData.apimUser.lastName
 });
 
 export const createUpsertSql = (dbConfig: IDecodableConfigPostgreSQL) => (
