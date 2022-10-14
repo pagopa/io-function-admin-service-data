@@ -121,16 +121,16 @@ export const mapDataToTableRow = (
     readonly apimSubscription: ApimSubscriptionResponse;
   }
 ): MigrationRowDataTable => ({
+  id: retrievedDocument.serviceId,
   isVisible: retrievedDocument.isVisible,
+  name: retrievedDocument.serviceName,
   organizationFiscalCode: retrievedDocument.organizationFiscalCode,
   requireSecureChannels: retrievedDocument.requireSecureChannels,
-  serviceName: retrievedDocument.serviceName || "",
   serviceVersion: retrievedDocument.version,
-  sourceEmail: apimData.apimUser.email,
-  sourceId: apimData.apimSubscription.ownerId,
-  sourceName: apimData.apimUser.firstName,
-  sourceSurname: apimData.apimUser.lastName,
-  subscriptionId: retrievedDocument.serviceId
+  subscriptionAccountEmail: apimData.apimUser.email,
+  subscriptionAccountId: apimData.apimSubscription.ownerId,
+  subscriptionAccountName: apimData.apimUser.firstName,
+  subscriptionAccountSurname: apimData.apimUser.lastName
 });
 
 export const createUpsertSql = (dbConfig: IDecodableConfigPostgreSQL) => (
@@ -142,8 +142,17 @@ export const createUpsertSql = (dbConfig: IDecodableConfigPostgreSQL) => (
     .withSchema(dbConfig.DB_SCHEMA)
     .table(dbConfig.DB_TABLE)
     .insert(data)
-    .onConflict("subscriptionId")
-    .merge(["organizationFiscalCode", "serviceVersion", "serviceName"])
+    .onConflict("id")
+    .merge([
+      "organizationFiscalCode",
+      "version",
+      "name",
+      "isVisible",
+      "subscriptionAccountId",
+      "subscriptionAccountName",
+      "subscriptionAccountSurname",
+      "subscriptionAccountEmail"
+    ])
     .whereRaw(
       `"${dbConfig.DB_TABLE}"."serviceVersion" < excluded."serviceVersion"`
     )
