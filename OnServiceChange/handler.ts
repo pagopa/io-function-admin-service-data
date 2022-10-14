@@ -144,7 +144,7 @@ export const createUpsertSql = (dbConfig: IDecodableConfigPostgreSQL) => (
     .onConflict("subscriptionId")
     .merge(["organizationFiscalCode", "serviceVersion", "serviceName"])
     .whereRaw(
-      `"${dbConfig.DB_TABLE}"."serviceVersion" < excluded."serviceVersion"`
+      `"${dbConfig.DB_TABLE}"."serviceVersion" <= excluded."serviceVersion"`
     )
     .toQuery() as NonEmptyString;
 

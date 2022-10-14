@@ -49,12 +49,12 @@ const mockApimDelegateUserReponse = {
 } as ApimDelegateUserResponse;
 const mockMigrationRowDataTable = {
   isVisible: true,
-  subscriptionId: mockSubscriptionId,
+  id: mockSubscriptionId,
   organizationFiscalCode: mockOrganizationFiscalCode,
-  sourceId: mockOwnerId,
-  sourceName: "NomeDelegato" as NonEmptyString,
-  sourceSurname: "CognomeDelegato" as NonEmptyString,
-  sourceEmail: "email@test.com" as EmailString
+  subscriptionAccountId: mockOwnerId,
+  subscriptionAccountName: "NomeDelegato" as NonEmptyString,
+  subscriptionAccountSurname: "CognomeDelegato" as NonEmptyString,
+  subscriptionAccountEmail: "email@test.com" as EmailString
 };
 
 const mockApimSubscriptionGet = jest.fn(() =>
@@ -129,17 +129,17 @@ describe("createUpsertSql", () => {
       DB_TABLE: "Export"
     } as IDecodableConfigPostgreSQL;
     const data = ({
-      subscriptionId: "subId1",
+      id: "subId1",
       isVisible: true,
+      name: "Service Test",
       organizationFiscalCode: "12345678901",
-      sourceId: "00000000000000000000000000",
-      sourceName: "source name",
-      sourceSurname: "source surname",
-      sourceEmail: "source email",
-      serviceVersion: 0,
-      serviceName: "Service Test"
+      subscriptionAccountId: "00000000000000000000000000",
+      subscriptionAccountName: "source name",
+      subscriptionAccountSurname: "source surname",
+      subscriptionAccountEmail: "source email",
+      version: 0
     } as unknown) as MigrationRowDataTable;
-    const expected = `insert into "ServiceData"."Export" ("isVisible", "organizationFiscalCode", "serviceName", "serviceVersion", "sourceEmail", "sourceId", "sourceName", "sourceSurname", "subscriptionId") values (true, '12345678901', 'Service Test', 0, 'source email', '00000000000000000000000000', 'source name', 'source surname', 'subId1') on conflict ("subscriptionId") do update set "organizationFiscalCode" = excluded."organizationFiscalCode", "serviceVersion" = excluded."serviceVersion", "serviceName" = excluded."serviceName" where "Export"."serviceVersion" < excluded."serviceVersion"`;
+    const expected = `insert into "ServiceData"."Export" ("id", "isVisible", "name", "organizationFiscalCode", "subscriptionAccountEmail", "subscriptionAccountId", "subscriptionAccountName", "subscriptionAccountSurname", "version") values ('subId1', true, 'Service Test', '12345678901', 'source email', '00000000000000000000000000', 'source name', 'source surname', 0) on conflict ("subscriptionId") do update set "organizationFiscalCode" = excluded."organizationFiscalCode", "serviceVersion" = excluded."serviceVersion", "serviceName" = excluded."serviceName" where "Export"."serviceVersion" <= excluded."serviceVersion"`;
 
     const sql = createUpsertSql(config)(data);
     expect(sql.trim()).toBe(expected.trim());
