@@ -8,7 +8,7 @@
       "connectionStringSetting": "COSMOSDB_CONNECTIONSTRING",
       "databaseName": "%COSMOSDB_NAME%",
       "collectionName": "%COSMOSDB_SERVICES_COLLECTION%",
-      "leaseCollectionName": "%COSMOSDB_SERVICES_DATA_LEASE_COLLECTION%",
+      "leaseCollectionName": "%COSMOSDB_SERVICES_LEASE_COLLECTION%",
       "createLeaseCollectionIfNotExists": true,
       "startFromBeginning": true
     },
