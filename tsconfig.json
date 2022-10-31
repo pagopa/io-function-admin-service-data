@@ -15,6 +15,7 @@
     "dist",
     "node_modules",
     "**/__tests__/*",
-    "Dangerfile.ts"
+    "Dangerfile.ts",
+    "__integrations__"
   ]
 }

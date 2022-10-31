@@ -1,0 +1,42 @@
+version: "2.2"
+
+services:
+  myapp:
+    build:
+      context: ../../../
+      dockerfile: docker/functions/Dockerfile
+    environment:
+      - NODE_TLS_REJECT_UNAUTHORIZED=0
+    env_file:
+      - env.scenario
+    depends_on:
+      - postgres
+    expose:
+      - ${SERVER_PORT}
+    ports:
+      - ${SERVER_PORT}:7071
+    volumes:
+      - "../../../:/usr/src/app/"
+    networks:
+      - integrations-net
+
+  cosmosdb:
+    build:
+      context: ../../../
+      dockerfile: docker/cosmosdb/Dockerfile
+    environment:
+      - NODE_TLS_REJECT_UNAUTHORIZED=0
+    env_file:
+      - env.scenario
+    expose:
+      - ${COSMOS_DB_PORT}
+    ports:
+      - ${COSMOS_DB_PORT}:3000
+    networks:
+      - integrations-net
+
+networks:
+  integrations-net:
+    driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: 1450
