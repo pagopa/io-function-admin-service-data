@@ -125,6 +125,7 @@ export const mapDataToTableRow = (
   isVisible: retrievedDocument.isVisible,
   name: retrievedDocument.serviceName,
   organizationFiscalCode: retrievedDocument.organizationFiscalCode,
+  requireSecureChannels: retrievedDocument.requireSecureChannels,
   serviceVersion: retrievedDocument.version,
   subscriptionAccountEmail: apimData.apimUser.email,
   subscriptionAccountId: apimData.apimSubscription.ownerId,

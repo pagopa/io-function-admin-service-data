@@ -12,6 +12,7 @@ export const MigrationRowDataTable = t.interface({
   isVisible: t.boolean,
   name: NonEmptyString,
   organizationFiscalCode: OrganizationFiscalCode,
+  requireSecureChannels: t.boolean,
   serviceVersion: t.number,
 
   // data related to the APIM account that owns the related subscription
