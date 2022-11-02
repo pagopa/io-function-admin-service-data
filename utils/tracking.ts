@@ -13,7 +13,7 @@ export const trackGenericError = (
   obj: unknown = {} /** default empty object to prevent nullish values */
 ): void => {
   telemetryClient.trackEvent({
-    name: "selfcare.subsmigrations.services.generic-error",
+    name: "developerportal.servicedata.generic-error",
     properties: {
       obj,
       reason
