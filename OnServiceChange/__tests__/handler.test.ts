@@ -111,11 +111,15 @@ const mockPool = {
   )
 };
 
+const mockTelemtryClient = {
+  trackGenericError: jest.fn()
+};
+
 describe("Handler", () => {
   it("should return a Function", async () => {
     const apim = (mockApim as unknown) as IApimConfig;
     const mockClientPool = await mockPool.connect();
-    const handler = await OnServiceChangeHandler(
+    const handler = await OnServiceChangeHandler(mockTelemtryClient as any)(
       mockConfig as any,
       apim,
       mockClientPool
@@ -208,7 +212,8 @@ describe("getApimUserBySubscriptionResponse", () => {
     const apim = (mockApim as unknown) as IApimConfig;
     const res = await getApimUserBySubscriptionResponse(
       apim,
-      mockApimSubscriptionResponse
+      mockApimSubscriptionResponse,
+      mockTelemtryClient as any
     )();
     expect(isRight(res)).toBe(true);
     if (isRight(res)) {
@@ -229,7 +234,8 @@ describe("storeDocumentApimToDatabase", () => {
     const res = await storeDocumentApimToDatabase(
       apim,
       mockConfig as any,
-      mockClientPool
+      mockClientPool,
+      mockTelemtryClient as any
     )(mockDocuments[0] as any)();
     expect(isRight(res)).toBe(true);
     if (isRight(res)) {
