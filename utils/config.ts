@@ -13,7 +13,10 @@ import { pipe } from "fp-ts/lib/function";
 import { readableReport } from "@pagopa/ts-commons/lib/reporters";
 import { NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { withDefault } from "@pagopa/ts-commons/lib/types";
-import { NumberFromString } from "@pagopa/ts-commons/lib/numbers";
+import {
+  IntegerFromString,
+  NumberFromString
+} from "@pagopa/ts-commons/lib/numbers";
 
 // Environment configuration to connect to dedicate db instance
 //   needed in order to persist migration data
@@ -43,6 +46,21 @@ export const IDecodableConfigAPIM = t.interface({
   APIM_TENANT_ID: NonEmptyString
 });
 
+// Environment configuration to connect to Application Insight instance
+//   needed in order to monitoring basic events and custom events
+export type IDecodableConfigAppInsight = t.TypeOf<
+  typeof IDecodableConfigAppInsight
+>;
+export const IDecodableConfigAppInsight = t.intersection([
+  t.interface({
+    APPINSIGHTS_INSTRUMENTATIONKEY: NonEmptyString
+  }),
+  t.partial({
+    APPINSIGHTS_DISABLE: NonEmptyString,
+    APPINSIGHTS_SAMPLING_PERCENTAGE: withDefault(IntegerFromString, 5)
+  })
+]);
+
 // global app configuration
 export type IConfig = t.TypeOf<typeof IConfig>;
 // eslint-disable-next-line @typescript-eslint/ban-types
@@ -50,6 +68,7 @@ export type IConfig = t.TypeOf<typeof IConfig>;
 export const IConfig = t.intersection([
   IDecodableConfigPostgreSQL,
   IDecodableConfigAPIM,
+  IDecodableConfigAppInsight,
   t.interface({
     AzureWebJobsStorage: NonEmptyString,
 
