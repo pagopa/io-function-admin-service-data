@@ -26,7 +26,11 @@ import {
 } from "../models/DomainErrors";
 import { queryDataTable } from "../utils/db";
 import { initTelemetryClient } from "../utils/appinsight";
-import { trackGenericError } from "../utils/tracking";
+import {
+  trackFailApimUserBySubscriptionResponse,
+  trackFailDecode,
+  trackGenericError
+} from "../utils/tracking";
 
 /*
  ** The right full path for ownerID is in this kind of format:
@@ -104,9 +108,10 @@ export const getApimUserBySubscriptionResponse = (
           apimSubscriptionResponse.ownerId
         ),
       () => {
-        trackGenericError(telemetryClient)(
-          "Error on retrieve APIM User by Subscription Response",
-          apimSubscriptionResponse
+        trackFailApimUserBySubscriptionResponse(telemetryClient)(
+          apimSubscriptionResponse.ownerId,
+          "Error on retrieve APIM User by Subscription Response" as NonEmptyString,
+          apimSubscriptionResponse.subscriptionId
         );
         return toApimUserError(
           "The provided subscription identifier is malformed or invalid or occur an Authetication Error."
@@ -118,10 +123,7 @@ export const getApimUserBySubscriptionResponse = (
         ApimUserResponse.decode,
         TE.fromEither,
         TE.mapLeft(() => {
-          trackGenericError(telemetryClient)(
-            "Error on User Response",
-            ApimUserResponse
-          );
+          trackFailDecode(telemetryClient)("Error on Decode User Response");
           return toApimUserError("Invalid Apim User Response Decode.");
         })
       )
