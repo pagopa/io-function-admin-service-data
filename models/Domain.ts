@@ -5,6 +5,7 @@ import {
 } from "@pagopa/ts-commons/lib/strings";
 
 import * as t from "io-ts";
+import { ServiceSearchItem } from "../generated/definitions/ServiceSearchItem";
 export type MigrationRowDataTable = t.TypeOf<typeof MigrationRowDataTable>;
 export const MigrationRowDataTable = t.interface({
   // data related to the subscription received from COSMOS
@@ -21,3 +22,9 @@ export const MigrationRowDataTable = t.interface({
   subscriptionAccountName: NonEmptyString,
   subscriptionAccountSurname: NonEmptyString
 });
+
+export const ServiceSearchResultSet = t.interface({
+  rowCount: t.number,
+  rows: t.readonlyArray(ServiceSearchItem)
+});
+export type ServiceSearchResultSet = t.TypeOf<typeof ServiceSearchResultSet>;
