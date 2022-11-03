@@ -188,89 +188,89 @@ export const storeDocumentApimToDatabase = (
 ) => (
   retrievedDocument: RetrievedService
 ): TE.TaskEither<DomainError, QueryResult | void> =>
-  pipe(
-    retrievedDocument.serviceId,
-    // given the subscription, retrieve it's apim object
-    id => getApimOwnerIdBySubscriptionId(apimClient, id),
-    TE.chainFirstTaskK(apim => {
-      Console.log(
-        `[getApimOwnerIdBySubscriptionId] Apim object retrieved: ${apim}`
-      );
-      trackEvent(telemetryClient)(
-        `[EVENT] Apim successfully executed: ${apim}`
-      );
-      return TE.of(apim);
-    }),
-    TE.chainW(apimSubscription =>
-      pipe(
-        // given the subscription apim object, retrieve its owner's detail
-        getApimUserBySubscriptionResponse(
-          apimClient,
-          apimSubscription,
-          telemetryClient
-        ),
-        TE.chainFirstTaskK(owner => {
-          Console.log(
-            `[getApimUserBySubscriptionResponse] Apim object retrieved: ${owner}`
-          );
-          trackEvent(telemetryClient)(
-            `[EVENT] Owner successfully executed: ${owner}`
-          );
-          return TE.of(owner);
-        }),
-        TE.chainW(apimUser =>
-          pipe(
-            { apimSubscription, apimUser },
-            apimData => mapDataToTableRow(retrievedDocument, apimData),
-            createUpsertSql(config),
-            sql =>
-              pipe(
-                queryDataTable(pool, sql),
-                TE.map(queryResult => {
-                  trackEvent(telemetryClient)(
-                    `[EVENT] Query Result successfully executed: ${sql}`
-                  );
-                  return queryResult;
-                })
-              ),
-            TE.map(queryRes => {
-              trackEvent(telemetryClient)(
-                "[EVENT] Query successfully executed!"
-              );
-              return queryRes;
-            }),
-            TE.mapLeft(err => {
-              trackGenericError(telemetryClient)(
-                "Error on query database",
-                err.message
-              );
-              return toPostgreSQLError(err.message);
-            })
+    pipe(
+      retrievedDocument.serviceId,
+      // given the subscription, retrieve it's apim object
+      id => getApimOwnerIdBySubscriptionId(apimClient, id),
+      TE.chainFirstTaskK(apim => {
+        Console.log(
+          `[getApimOwnerIdBySubscriptionId] Apim object retrieved: ${apim}`
+        );
+        trackEvent(telemetryClient)(
+          `[EVENT] Apim successfully executed: ${apim}`
+        );
+        return TE.of(apim);
+      }),
+      TE.chainW(apimSubscription =>
+        pipe(
+          // given the subscription apim object, retrieve its owner's detail
+          getApimUserBySubscriptionResponse(
+            apimClient,
+            apimSubscription,
+            telemetryClient
+          ),
+          TE.chainFirstTaskK(owner => {
+            Console.log(
+              `[getApimUserBySubscriptionResponse] Apim object retrieved: ${owner}`
+            );
+            trackEvent(telemetryClient)(
+              `[EVENT] Owner successfully executed: ${owner}`
+            );
+            return TE.of(owner);
+          }),
+          TE.chainW(apimUser =>
+            pipe(
+              { apimSubscription, apimUser },
+              apimData => mapDataToTableRow(retrievedDocument, apimData),
+              createUpsertSql(config),
+              sql =>
+                pipe(
+                  queryDataTable(pool, sql),
+                  TE.map(queryResult => {
+                    trackEvent(telemetryClient)(
+                      `[EVENT] Query Result successfully executed: ${sql}`
+                    );
+                    return queryResult;
+                  })
+                ),
+              TE.map(queryRes => {
+                trackEvent(telemetryClient)(
+                  "[EVENT] Query successfully executed!"
+                );
+                return queryRes;
+              }),
+              TE.mapLeft(err => {
+                trackGenericError(telemetryClient)(
+                  "Error on query database",
+                  err.message
+                );
+                return toPostgreSQLError(err.message);
+              })
+            )
           )
         )
+      ),
+      // check errors to see if we might fail or just ignore current document
+      TE.foldW(
+        err => {
+          // There are Services in database that have no related Subscription.
+          // It's an inconsistent state and should not be present;
+          //  however, for Services of early days of IO it may happen as we still have Services created when IO was just a proof-of-concepts
+          // We choose to just skip such documents
+          if (isSubscriptionNotFound(err)) {
+            trackEvent(telemetryClient)("[EVENT] Skipped subscription");
+            return TE.of(void 0);
+          } else {
+            trackGenericError(telemetryClient)(
+              "Error on inconsistent service",
+              err.message
+            );
+            return TE.left(err);
+          }
+        },
+        a => TE.of(a)
       )
-    ),
-    // check errors to see if we might fail or just ignore current document
-    TE.foldW(
-      err => {
-        // There are Services in database that have no related Subscription.
-        // It's an inconsistent state and should not be present;
-        //  however, for Services of early days of IO it may happen as we still have Services created when IO was just a proof-of-concepts
-        // We choose to just skip such documents
-        if (isSubscriptionNotFound(err)) {
-          trackEvent(telemetryClient)("[EVENT] Skipped subscription");
-          return TE.of(void 0);
-        } else {
-          trackGenericError(telemetryClient)(
-            "Error on inconsistent service",
-            err.message
-          );
-          return TE.left(err);
-        }
-      },
-      a => TE.of(a)
-    )
-  );
+    );
 
 const handler = (
   config: IConfig,
@@ -278,21 +278,21 @@ const handler = (
   pool: Pool,
   telemetryClient: ReturnType<typeof initTelemetryClient>
 ) => async (document: RetrievedService): Promise<void> =>
-  pipe(
-    document,
-    storeDocumentApimToDatabase(apimClient, config, pool, telemetryClient),
-    TE.chainFirstTaskK(_ => {
-      trackEvent(telemetryClient)(`[EVENT] Executed with: ${document}`);
-      Console.log(`[START] Exec function with document: ${document}`);
-      return TE.of(_);
-    }),
-    TE.map(_ => void 0 /* we expect no return */),
-    // let the handler fail
-    TE.getOrElse(err => {
-      trackGenericError(telemetryClient)("Error on handler", err.message);
-      throw err;
-    })
-  )();
+    pipe(
+      document,
+      storeDocumentApimToDatabase(apimClient, config, pool, telemetryClient),
+      TE.chainFirstTaskK(_ => {
+        trackEvent(telemetryClient)(`[EVENT] Executed with: ${document}`);
+        Console.log(`[START] Exec function with document: ${document}`);
+        return TE.of(_);
+      }),
+      TE.map(_ => void 0 /* we expect no return */),
+      // let the handler fail
+      TE.getOrElse(err => {
+        trackGenericError(telemetryClient)("Error on handler", err.message);
+        throw err;
+      })
+    )();
 
 const OnServiceChangeHandler = (
   telemetryClient: ReturnType<typeof initTelemetryClient>
@@ -301,14 +301,16 @@ const OnServiceChangeHandler = (
   apimClient: IApimConfig,
   pool: Pool
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-) => async (documents: ReadonlyArray<RetrievedService>): Promise<any> =>
-  pipe(
+) => async (documents: ReadonlyArray<RetrievedService>): Promise<any> => {
+  trackEvent(telemetryClient)(`Executed with ${JSON.stringify(documents)}`)
+  return pipe(
     Array.isArray(documents) ? documents : [documents],
     RA.chainFirst<RetrievedService, unknown>(d => {
       trackEvent(telemetryClient)(`[EVENT] Documents: ${d}`);
       return RA.of(d);
     }),
     RA.map(d => handler(config, apimClient, pool, telemetryClient)(d))
-  );
+  )
+};
 
 export default OnServiceChangeHandler;
