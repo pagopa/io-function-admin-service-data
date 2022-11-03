@@ -25,6 +25,12 @@ import {
   toPostgreSQLError
 } from "../models/DomainErrors";
 import { queryDataTable } from "../utils/db";
+import { initTelemetryClient } from "../utils/appinsight";
+import {
+  trackFailApimUserBySubscriptionResponse,
+  trackFailDecode,
+  trackGenericError
+} from "../utils/tracking";
 
 /*
  ** The right full path for ownerID is in this kind of format:
@@ -90,7 +96,8 @@ export const getApimOwnerIdBySubscriptionId = (
 
 export const getApimUserBySubscriptionResponse = (
   apim: IApimConfig,
-  apimSubscriptionResponse: ApimSubscriptionResponse
+  apimSubscriptionResponse: ApimSubscriptionResponse,
+  telemetryClient: ReturnType<typeof initTelemetryClient>
 ): TE.TaskEither<IApimUserError, ApimUserResponse> =>
   pipe(
     TE.tryCatch(
@@ -100,16 +107,25 @@ export const getApimUserBySubscriptionResponse = (
           apim.config.APIM_SERVICE_NAME,
           apimSubscriptionResponse.ownerId
         ),
-      () =>
-        toApimUserError(
+      () => {
+        trackFailApimUserBySubscriptionResponse(telemetryClient)(
+          apimSubscriptionResponse.ownerId,
+          "Error on retrieve APIM User by Subscription Response" as NonEmptyString,
+          apimSubscriptionResponse.subscriptionId
+        );
+        return toApimUserError(
           "The provided subscription identifier is malformed or invalid or occur an Authetication Error."
-        )
+        );
+      }
     ),
     TE.chain(
       flow(
         ApimUserResponse.decode,
         TE.fromEither,
-        TE.mapLeft(() => toApimUserError("Invalid Apim User Response Decode."))
+        TE.mapLeft(() => {
+          trackFailDecode(telemetryClient)("Error on Decode User Response");
+          return toApimUserError("Invalid Apim User Response Decode.");
+        })
       )
     )
   );
@@ -165,7 +181,8 @@ const isSubscriptionNotFound = (err: DomainError): boolean =>
 export const storeDocumentApimToDatabase = (
   apimClient: IApimConfig,
   config: IConfig,
-  pool: Pool
+  pool: Pool,
+  telemetryClient: ReturnType<typeof initTelemetryClient>
 ) => (
   retrievedDocument: RetrievedService
 ): TE.TaskEither<DomainError, QueryResult | void> =>
@@ -176,19 +193,29 @@ export const storeDocumentApimToDatabase = (
     TE.chainW(apimSubscription =>
       pipe(
         // given the subscription apim object, retrieve its owner's detail
-        getApimUserBySubscriptionResponse(apimClient, apimSubscription),
+        getApimUserBySubscriptionResponse(
+          apimClient,
+          apimSubscription,
+          telemetryClient
+        ),
         TE.chainW(apimUser =>
           pipe(
             { apimSubscription, apimUser },
             apimData => mapDataToTableRow(retrievedDocument, apimData),
             createUpsertSql(config),
             sql => queryDataTable(pool, sql),
-            TE.mapLeft(err => toPostgreSQLError(err.message))
+            TE.mapLeft(err => {
+              trackGenericError(telemetryClient)(
+                "Error on query database",
+                err.message
+              );
+              return toPostgreSQLError(err.message);
+            })
           )
         )
       )
     ),
-    // check errors to see if we might fail or just ignore curretn document
+    // check errors to see if we might fail or just ignore current document
     TE.foldW(err => {
       // There are Services in database that have no related Subscription.
       // It's an inconsistent state and should not be present;
@@ -197,6 +224,10 @@ export const storeDocumentApimToDatabase = (
       if (isSubscriptionNotFound(err)) {
         return TE.of(void 0);
       } else {
+        trackGenericError(telemetryClient)(
+          "Error on inconsistent service",
+          err.message
+        );
         return TE.left(err);
       }
     }, TE.of)
@@ -205,19 +236,23 @@ export const storeDocumentApimToDatabase = (
 const handler = (
   config: IConfig,
   apimClient: IApimConfig,
-  pool: Pool
+  pool: Pool,
+  telemetryClient: ReturnType<typeof initTelemetryClient>
 ) => async (document: RetrievedService): Promise<void> =>
   pipe(
     document,
-    storeDocumentApimToDatabase(apimClient, config, pool),
+    storeDocumentApimToDatabase(apimClient, config, pool, telemetryClient),
     TE.map(_ => void 0 /* we expect no return */),
     // let the handler fail
     TE.getOrElse(err => {
+      trackGenericError(telemetryClient)("Error on handler", err.message);
       throw err;
     })
   )();
 
 const OnServiceChangeHandler = (
+  telemetryClient: ReturnType<typeof initTelemetryClient>
+) => (
   config: IConfig,
   apimClient: IApimConfig,
   pool: Pool
@@ -225,7 +260,7 @@ const OnServiceChangeHandler = (
 ) => async (documents: ReadonlyArray<RetrievedService>): Promise<any> =>
   pipe(
     Array.isArray(documents) ? documents : [documents],
-    RA.map(d => handler(config, apimClient, pool)(d))
+    RA.map(d => handler(config, apimClient, pool, telemetryClient)(d))
   );
 
 export default OnServiceChangeHandler;
