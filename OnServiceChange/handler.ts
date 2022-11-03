@@ -302,6 +302,7 @@ const OnServiceChangeHandler = (
   pool: Pool
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ) => async (documents: ReadonlyArray<RetrievedService>): Promise<any> => {
+  console.log(`--> Executed with ${JSON.stringify(documents)}`)
   trackEvent(telemetryClient)(`Executed with ${JSON.stringify(documents)}`)
   return pipe(
     Array.isArray(documents) ? documents : [documents],
