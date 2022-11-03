@@ -57,8 +57,6 @@ export const IConfig = t.intersection([
     COSMOSDB_NAME: NonEmptyString,
     COSMOSDB_URI: NonEmptyString,
 
-    QueueStorageConnection: NonEmptyString,
-
     isProduction: t.boolean
   })
 ]);
