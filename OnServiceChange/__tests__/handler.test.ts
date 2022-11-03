@@ -112,7 +112,8 @@ const mockPool = {
 };
 
 const mockTelemtryClient = {
-  trackGenericError: jest.fn()
+  trackGenericError: jest.fn(),
+  trackEvent: jest.fn()
 };
 
 describe("Handler", () => {
