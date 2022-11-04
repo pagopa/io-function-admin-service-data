@@ -301,12 +301,12 @@ const OnServiceChangeHandler = (
   apimClient: IApimConfig,
   pool: Pool
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-) => async (documents: ReadonlyArray<RetrievedService>): Promise<any> => {
-  console.log(`--> Executed with ${JSON.stringify(documents)}`)
+) => async (context: Context, documents: ReadonlyArray<RetrievedService>): Promise<any> => {
   trackEvent(telemetryClient)(`Executed with ${JSON.stringify(documents)}`)
   return pipe(
     Array.isArray(documents) ? documents : [documents],
     RA.chainFirst<RetrievedService, unknown>(d => {
+      console.log(`--> Executed with ${JSON.stringify(d)}`)
       trackEvent(telemetryClient)(`[EVENT] Documents: ${d}`);
       return RA.of(d);
     }),
