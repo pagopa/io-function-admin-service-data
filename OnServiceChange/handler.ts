@@ -301,7 +301,7 @@ const OnServiceChangeHandler = (
   apimClient: IApimConfig,
   pool: Pool
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-) => async (context: Context, documents: ReadonlyArray<RetrievedService>): Promise<any> => {
+) => async (context: unknown, documents: ReadonlyArray<RetrievedService>): Promise<any> => {
   trackEvent(telemetryClient)(`Executed with ${JSON.stringify(documents)}`)
   return pipe(
     Array.isArray(documents) ? documents : [documents],
