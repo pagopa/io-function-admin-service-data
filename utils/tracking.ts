@@ -24,6 +24,24 @@ export const trackGenericError = (
 };
 
 /**
+ * Track when a generic event
+ *
+ * @param telemetryClient
+ * @returns
+ */
+export const trackEvent = (
+  telemetryClient: ReturnType<typeof initTelemetryClient>
+) => (event: string = ""): void => {
+  telemetryClient.trackEvent({
+    name: "developerportal.servicedata.generic-event",
+    properties: {
+      event
+    },
+    tagOverrides: { samplingEnabled: "false" }
+  });
+};
+
+/**
  * Track when fail to retrieve Apim User from Subscription
  *
  * @param telemetryClient

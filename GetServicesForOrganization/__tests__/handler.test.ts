@@ -65,14 +65,9 @@ describe("getServices", () => {
       "email@delegato.com" as EmailString,
       "12345678901" as OrganizationFiscalCode
     )();
-    console.log(res);
     if (isRight(res)) {
-      console.log(res.right.rows);
-
       const decoded = ServiceSearchResultSet.decode(res.right);
-      console.log(decoded);
       expect(isRight(decoded)).toBe(true);
-      console.log(res.right);
       expect(res.right).toMatchObject({
         command: "SELECT",
         rowCount: 1,

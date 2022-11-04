@@ -8,6 +8,8 @@ import { NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { RetrievedService } from "@pagopa/io-functions-commons/dist/src/models/service";
 import { ErrorResponse as ApimErrorResponse } from "@azure/arm-apimanagement";
 import { Pool, QueryResult } from "pg";
+import * as Console from "fp-ts/Console";
+import { Context } from "@azure/functions";
 import { MigrationRowDataTable } from "../models/Domain";
 import { IConfig, IDecodableConfigPostgreSQL } from "../utils/config";
 import {
@@ -27,6 +29,7 @@ import {
 import { queryDataTable } from "../utils/db";
 import { initTelemetryClient } from "../utils/appinsight";
 import {
+  trackEvent,
   trackFailApimUserBySubscriptionResponse,
   trackFailDecode,
   trackGenericError
@@ -142,11 +145,11 @@ export const mapDataToTableRow = (
   name: retrievedDocument.serviceName,
   organizationFiscalCode: retrievedDocument.organizationFiscalCode,
   requireSecureChannels: retrievedDocument.requireSecureChannels,
-  serviceVersion: retrievedDocument.version,
   subscriptionAccountEmail: apimData.apimUser.email,
   subscriptionAccountId: apimData.apimSubscription.ownerId,
   subscriptionAccountName: apimData.apimUser.firstName,
-  subscriptionAccountSurname: apimData.apimUser.lastName
+  subscriptionAccountSurname: apimData.apimUser.lastName,
+  version: retrievedDocument.version
 });
 
 export const createUpsertSql = (dbConfig: IDecodableConfigPostgreSQL) => (
@@ -169,9 +172,7 @@ export const createUpsertSql = (dbConfig: IDecodableConfigPostgreSQL) => (
       "subscriptionAccountSurname",
       "subscriptionAccountEmail"
     ])
-    .whereRaw(
-      `"${dbConfig.DB_TABLE}"."serviceVersion" < excluded."serviceVersion"`
-    )
+    .whereRaw(`"${dbConfig.DB_TABLE}"."version" < excluded."version"`)
     .toQuery() as NonEmptyString;
 
 const isSubscriptionNotFound = (err: DomainError): boolean =>
@@ -190,6 +191,15 @@ export const storeDocumentApimToDatabase = (
     retrievedDocument.serviceId,
     // given the subscription, retrieve it's apim object
     id => getApimOwnerIdBySubscriptionId(apimClient, id),
+    TE.chainFirstTaskK(apim => {
+      Console.log(
+        `[getApimOwnerIdBySubscriptionId] Apim object retrieved: ${apim}`
+      );
+      trackEvent(telemetryClient)(
+        `[EVENT] Apim successfully executed: ${apim}`
+      );
+      return TE.of(apim);
+    }),
     TE.chainW(apimSubscription =>
       pipe(
         // given the subscription apim object, retrieve its owner's detail
@@ -198,12 +208,36 @@ export const storeDocumentApimToDatabase = (
           apimSubscription,
           telemetryClient
         ),
+        TE.chainFirstTaskK(owner => {
+          Console.log(
+            `[getApimUserBySubscriptionResponse] Apim object retrieved: ${owner}`
+          );
+          trackEvent(telemetryClient)(
+            `[EVENT] Owner successfully executed: ${owner}`
+          );
+          return TE.of(owner);
+        }),
         TE.chainW(apimUser =>
           pipe(
             { apimSubscription, apimUser },
             apimData => mapDataToTableRow(retrievedDocument, apimData),
             createUpsertSql(config),
-            sql => queryDataTable(pool, sql),
+            sql =>
+              pipe(
+                queryDataTable(pool, sql),
+                TE.map(queryResult => {
+                  trackEvent(telemetryClient)(
+                    `[EVENT] Query Result successfully executed: ${sql}`
+                  );
+                  return queryResult;
+                })
+              ),
+            TE.map(queryRes => {
+              trackEvent(telemetryClient)(
+                "[EVENT] Query successfully executed!"
+              );
+              return queryRes;
+            }),
             TE.mapLeft(err => {
               trackGenericError(telemetryClient)(
                 "Error on query database",
@@ -216,21 +250,25 @@ export const storeDocumentApimToDatabase = (
       )
     ),
     // check errors to see if we might fail or just ignore current document
-    TE.foldW(err => {
-      // There are Services in database that have no related Subscription.
-      // It's an inconsistent state and should not be present;
-      //  however, for Services of early days of IO it may happen as we still have Services created when IO was just a proof-of-concepts
-      // We choose to just skip such documents
-      if (isSubscriptionNotFound(err)) {
-        return TE.of(void 0);
-      } else {
-        trackGenericError(telemetryClient)(
-          "Error on inconsistent service",
-          err.message
-        );
-        return TE.left(err);
-      }
-    }, TE.of)
+    TE.foldW(
+      err => {
+        // There are Services in database that have no related Subscription.
+        // It's an inconsistent state and should not be present;
+        //  however, for Services of early days of IO it may happen as we still have Services created when IO was just a proof-of-concepts
+        // We choose to just skip such documents
+        if (isSubscriptionNotFound(err)) {
+          trackEvent(telemetryClient)("[EVENT] Skipped subscription");
+          return TE.of(void 0);
+        } else {
+          trackGenericError(telemetryClient)(
+            "Error on inconsistent service",
+            err.message
+          );
+          return TE.left(err);
+        }
+      },
+      a => TE.of(a)
+    )
   );
 
 const handler = (
@@ -242,6 +280,11 @@ const handler = (
   pipe(
     document,
     storeDocumentApimToDatabase(apimClient, config, pool, telemetryClient),
+    TE.chainFirstTaskK(_ => {
+      trackEvent(telemetryClient)(`[EVENT] Executed with: ${document}`);
+      Console.log(`[START] Exec function with document: ${document}`);
+      return TE.of(_);
+    }),
     TE.map(_ => void 0 /* we expect no return */),
     // let the handler fail
     TE.getOrElse(err => {
@@ -252,15 +295,20 @@ const handler = (
 
 const OnServiceChangeHandler = (
   telemetryClient: ReturnType<typeof initTelemetryClient>
-) => (
-  config: IConfig,
-  apimClient: IApimConfig,
-  pool: Pool
+) => (config: IConfig, apimClient: IApimConfig, pool: Pool) => async (
+  context: Context,
+  documents: ReadonlyArray<RetrievedService>
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-) => async (documents: ReadonlyArray<RetrievedService>): Promise<any> =>
-  pipe(
+): Promise<any> => {
+  trackEvent(telemetryClient)(`Executed with ${JSON.stringify(documents)}`);
+  return pipe(
     Array.isArray(documents) ? documents : [documents],
+    RA.chainFirst<RetrievedService, unknown>(d => {
+      trackEvent(telemetryClient)(`[EVENT] Documents: ${d}`);
+      return RA.of(d);
+    }),
     RA.map(d => handler(config, apimClient, pool, telemetryClient)(d))
   );
+};
 
 export default OnServiceChangeHandler;
