@@ -14,9 +14,10 @@ export const MigrationRowDataTable = t.interface({
   name: NonEmptyString,
   organizationFiscalCode: OrganizationFiscalCode,
   requireSecureChannels: t.boolean,
-  serviceVersion: t.number,
+  version: t.number,
 
   // data related to the APIM account that owns the related subscription
+  // eslint-disable-next-line sort-keys
   subscriptionAccountEmail: EmailString,
   subscriptionAccountId: NonEmptyString,
   subscriptionAccountName: NonEmptyString,
