@@ -8,6 +8,7 @@ import { NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { RetrievedService } from "@pagopa/io-functions-commons/dist/src/models/service";
 import { ErrorResponse as ApimErrorResponse } from "@azure/arm-apimanagement";
 import { Pool, QueryResult } from "pg";
+import { Context } from "@azure/functions";
 import { MigrationRowDataTable } from "../models/Domain";
 import { IConfig, IDecodableConfigPostgreSQL } from "../utils/config";
 import {
@@ -142,11 +143,11 @@ export const mapDataToTableRow = (
   name: retrievedDocument.serviceName,
   organizationFiscalCode: retrievedDocument.organizationFiscalCode,
   requireSecureChannels: retrievedDocument.requireSecureChannels,
-  serviceVersion: retrievedDocument.version,
   subscriptionAccountEmail: apimData.apimUser.email,
   subscriptionAccountId: apimData.apimSubscription.ownerId,
   subscriptionAccountName: apimData.apimUser.firstName,
-  subscriptionAccountSurname: apimData.apimUser.lastName
+  subscriptionAccountSurname: apimData.apimUser.lastName,
+  version: retrievedDocument.version
 });
 
 export const createUpsertSql = (dbConfig: IDecodableConfigPostgreSQL) => (
@@ -169,9 +170,7 @@ export const createUpsertSql = (dbConfig: IDecodableConfigPostgreSQL) => (
       "subscriptionAccountSurname",
       "subscriptionAccountEmail"
     ])
-    .whereRaw(
-      `"${dbConfig.DB_TABLE}"."serviceVersion" < excluded."serviceVersion"`
-    )
+    .whereRaw(`"${dbConfig.DB_TABLE}"."version" < excluded."version"`)
     .toQuery() as NonEmptyString;
 
 const isSubscriptionNotFound = (err: DomainError): boolean =>
@@ -252,12 +251,11 @@ const handler = (
 
 const OnServiceChangeHandler = (
   telemetryClient: ReturnType<typeof initTelemetryClient>
-) => (
-  config: IConfig,
-  apimClient: IApimConfig,
-  pool: Pool
+) => (config: IConfig, apimClient: IApimConfig, pool: Pool) => async (
+  context: Context,
+  documents: ReadonlyArray<RetrievedService>
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-) => async (documents: ReadonlyArray<RetrievedService>): Promise<any> =>
+): Promise<any> =>
   pipe(
     Array.isArray(documents) ? documents : [documents],
     RA.map(d => handler(config, apimClient, pool, telemetryClient)(d))

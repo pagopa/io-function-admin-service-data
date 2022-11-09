@@ -26,6 +26,7 @@ import { createUpsertSql } from "../handler";
 import * as O from "fp-ts/lib/Option";
 import { isRight } from "fp-ts/lib/Either";
 import { QueryResult } from "pg";
+import { Context } from "@azure/functions";
 
 const mockSubscriptionId = "00000000000000000000000000" as NonEmptyString;
 const mockOrganizationFiscalCode = "01234567891" as OrganizationFiscalCode;
@@ -115,6 +116,11 @@ const mockTelemtryClient = {
   trackGenericError: jest.fn()
 };
 
+const mockContext = {
+  log: jest.fn(),
+  executionContext: { functionName: jest.fn() }
+};
+
 describe("Handler", () => {
   it("should return a Function", async () => {
     const apim = (mockApim as unknown) as IApimConfig;
@@ -123,7 +129,7 @@ describe("Handler", () => {
       mockConfig as any,
       apim,
       mockClientPool
-    )((void 0 as unknown) as any);
+    )((mockContext as unknown) as Context, (void 0 as unknown) as any);
     expect(handler).toBeInstanceOf(Array);
   });
 });
@@ -145,7 +151,7 @@ describe("createUpsertSql", () => {
       subscriptionAccountEmail: "source email",
       version: 0
     } as unknown) as MigrationRowDataTable;
-    const expected = `insert into "ServiceData"."Export" ("id", "isVisible", "name", "organizationFiscalCode", "subscriptionAccountEmail", "subscriptionAccountId", "subscriptionAccountName", "subscriptionAccountSurname", "version") values ('subId1', true, 'Service Test', '12345678901', 'source email', '00000000000000000000000000', 'source name', 'source surname', 0) on conflict ("id") do update set "organizationFiscalCode" = excluded."organizationFiscalCode", "version" = excluded."version", "name" = excluded."name", "isVisible" = excluded."isVisible", "subscriptionAccountId" = excluded."subscriptionAccountId", "subscriptionAccountName" = excluded."subscriptionAccountName", "subscriptionAccountSurname" = excluded."subscriptionAccountSurname", "subscriptionAccountEmail" = excluded."subscriptionAccountEmail" where "Export"."serviceVersion" < excluded."serviceVersion"`;
+    const expected = `insert into "ServiceData"."Export" ("id", "isVisible", "name", "organizationFiscalCode", "subscriptionAccountEmail", "subscriptionAccountId", "subscriptionAccountName", "subscriptionAccountSurname", "version") values ('subId1', true, 'Service Test', '12345678901', 'source email', '00000000000000000000000000', 'source name', 'source surname', 0) on conflict ("id") do update set "organizationFiscalCode" = excluded."organizationFiscalCode", "version" = excluded."version", "name" = excluded."name", "isVisible" = excluded."isVisible", "subscriptionAccountId" = excluded."subscriptionAccountId", "subscriptionAccountName" = excluded."subscriptionAccountName", "subscriptionAccountSurname" = excluded."subscriptionAccountSurname", "subscriptionAccountEmail" = excluded."subscriptionAccountEmail" where "Export"."version" < excluded."version"`;
 
     const sql = createUpsertSql(config)(data);
     expect(sql.trim()).toBe(expected.trim());
