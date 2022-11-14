@@ -1,9 +1,9 @@
-CREATE SCHEMA "DeveloperPortalServiceData";
+CREATE SCHEMA "${schemaName}";
 
 
 -- this table will contain data for services,
 --  enriched and denormalized in order to help queries for admin and statitstics purposes
-CREATE TABLE IF NOT EXISTS "DeveloperPortalServiceData".services
+CREATE TABLE IF NOT EXISTS "${schemaName}".services
 (
     "id" character(50)  NOT NULL, -- 'the unique identifier for the Service'
     "organizationFiscalCode" character(11)  NOT NULL, -- 'identifies the Organization the Service belongs to'
