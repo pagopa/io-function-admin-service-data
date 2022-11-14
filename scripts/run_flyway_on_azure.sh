@@ -22,11 +22,11 @@ DB_NAME=$2
 # Azure subscription to operate with
 AZ_SUBSCRIPTION=$3
 # Postgres Server resource name on Azure
-AZ_POSTGRES_RESOURCE_NAME="subsmigrations-db-postgresql"
+AZ_POSTGRES_RESOURCE_NAME="devportalservicedata-db-postgresql"
 # KeyVault info to fetch server credentials
 KV_NAME="kv-common"
-KV_LOGIN_KEY="selfcare-subsmigrations-DB-ADM-USERNAME"
-KV_LOGIN_PASSWORD_KEY="selfcare-subsmigrations-DB-ADM-PASSWORD"
+KV_LOGIN_KEY="devportal-servicedata-DB-ADM-USERNAME"
+KV_LOGIN_PASSWORD_KEY="devportal-servicedata-DB-ADM-PASSWORD"
 
 # Directory containing migrations for ALL databases.
 #  Relative to the project root, the actual sql scripts will be in ${SQL_MIGRATIONS_DIR}/${DB_NAME}
