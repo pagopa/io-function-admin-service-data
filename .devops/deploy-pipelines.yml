@@ -37,7 +37,7 @@ stages:
 
   # Create a relase
   # Activated when ONE OF these are met:
-  # - is on branch master 
+  # - is on branch master
   # - is a tag in the form v{version}-RELEASE
   - stage: Release
     condition:
@@ -97,8 +97,8 @@ stages:
           - task: DotNetCoreCLI@2
             inputs:
               command: "build"
-              arguments: "-o bin"   
-          # Copy application to  
+              arguments: "-o bin"
+          # Copy application to
           - task: CopyFiles@2
             inputs:
               SourceFolder: '$(System.DefaultWorkingDirectory)'
@@ -119,8 +119,8 @@ stages:
                 !test
                 !tsconfig.json
             displayName: 'Copy deploy files'
-            
-          - task: AzureFunctionApp@1  
+
+          - task: AzureFunctionApp@1
             inputs:
               azureSubscription: '$(PRODUCTION_AZURE_SUBSCRIPTION)'
               resourceGroupName: '$(PRODUCTION_RESOURCE_GROUP_NAME)'
@@ -139,8 +139,8 @@ stages:
     dependsOn:
       - Deploy_staging
     jobs:
-      - job: 'do_healthcheck'       
-        steps:  
+      - job: 'do_healthcheck'
+        steps:
           - checkout: none
           - script: |
               # fails if response status is not 2xx
@@ -153,9 +153,9 @@ stages:
       - Healthcheck
       - Deploy_staging
     jobs:
-      - job: 'do_deploy'       
-        steps:  
-          - task: AzureAppServiceManage@0   
+      - job: 'do_deploy'
+        steps:
+          - task: AzureAppServiceManage@0
             inputs:
               azureSubscription: '$(PRODUCTION_AZURE_SUBSCRIPTION)'
               resourceGroupName: '$(PRODUCTION_RESOURCE_GROUP_NAME)'
@@ -163,3 +163,28 @@ stages:
               sourceSlot: staging
               swapWithProduction: true
             displayName: Swap with production slot
+
+  - stage: Apply_Database_Schema
+    dependsOn:
+      - Release
+    pool:
+      name: io-prod-linux
+    jobs:
+      - job: make_migration
+        steps:
+          - task: AzureCLI@2
+            displayName: migrate db schema
+            inputs:
+              azureSubscription: '$(PRODUCTION_AZURE_SUBSCRIPTION)'
+              scriptType: "bash"
+              scriptLocation: "inlineScript"
+              failOnStandardError: false
+              inlineScript: |
+                set -e
+
+                # THIS IS THE PRODUCTION SCHEMA NAME, SO PLEASE DON'T CHANGE IT
+                SCHEMA_NAME=DeveloperPortalServiceData
+
+                ./scripts/run_flyway_on_azure.sh migrate db PROD-IO schema/migrations "${SCHEMA_NAME}" \
+                  && echo "Migration successful" \
+                  || { echo "Migration failed"; exit 1; }
