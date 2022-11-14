@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS "DeveloperPortalServiceData".services
     "version" integer NOT NULL, -- 'revision number of the Service this record is built upon'
     "name" character varying ,
     "isVisible" BOOLEAN NOT NULL, -- 'visibility attribute for the Service',
-    "requireSecureChannels" BOOLEAN NOT NULL; -- if true the message will be available only in the IOApp instead of both e-mail and IOApp
+    "requireSecureChannels" BOOLEAN NOT NULL, -- if true the message will be available only in the IOApp instead of both e-mail and IOApp
 
     -- data related to the APIM account that owns the related subscription
     "subscriptionAccountId" character(26)  NOT NULL,
