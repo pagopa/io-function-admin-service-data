@@ -12,4 +12,4 @@ export const DB_USER = envOrThrow("DB_USER");
 export const DB_PASSWORD = envOrThrow("DB_PASSWORD");
 export const DB_NAME = envOrThrow("DB_NAME", "db");
 export const DB_SCHEMA = envOrThrow("DB_SCHEMA");
-export const DB_TABLE = envOrThrow("DB_TABLE");
+export const DB_TABLE = envOrThrow("DB_TABLE", "services");
