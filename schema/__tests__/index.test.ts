@@ -20,14 +20,14 @@ const aRandomSubscriptionId = () => `a-sub-id-${Date.now()}`;
 
 // Dummy insert for a given subscriptionId
 const aMigrationInsertSQL = (subscriptionId: string) => `
-    INSERT INTO "${env.DB_SCHEMA}"."${env.DB_NAME}"(
+    INSERT INTO "${env.DB_SCHEMA}"."${env.DB_TABLE}"(
         "id", "organizationFiscalCode", "version", "name", "isVisible", "requireSecureChannels", "subscriptionAccountId", "subscriptionAccountName", "subscriptionAccountSurname", "subscriptionAccountEmail")
         VALUES ('${subscriptionId}', '0000000000', 1, 'any name', false, false, 1, 'aName', 'aSurname','an@email.com')
 `;
 
 // Select one record by subscriptionId
 const aMigrationSelectSQL = (subscriptionId: string) => `
-   SELECT * FROM "${env.DB_SCHEMA}"."${env.DB_NAME}" WHERE "subscriptionId"='${subscriptionId}'
+   SELECT * FROM "${env.DB_SCHEMA}"."${env.DB_TABLE}" WHERE "id"='${subscriptionId}'
 `;
 
 describe("Test on db", () => {
@@ -40,6 +40,6 @@ describe("Test on db", () => {
       rows: [{ id: subscriptionRetrieved }]
     } = await client.query(aMigrationSelectSQL(subscriptionId));
 
-    expect(subscriptionRetrieved).toBe(subscriptionId);
+    expect(subscriptionRetrieved.trim()).toBe(subscriptionId.trim());
   });
 });
