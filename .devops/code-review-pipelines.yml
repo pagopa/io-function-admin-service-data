@@ -1,10 +1,10 @@
 # Azure DevOps pipeline to build, check source codes and run tests.
 #
-# To make Danger JS run on a pull request you need to add the following pipeline 
-# variable and set it with a GitHub access token (scope public_repo); otherwise 
-# set its value to 'skip' without marking it secret: 
+# To make Danger JS run on a pull request you need to add the following pipeline
+# variable and set it with a GitHub access token (scope public_repo); otherwise
+# set its value to 'skip' without marking it secret:
 # - DANGER_GITHUB_API_TOKEN
-# 
+#
 
 # Automatically triggered on PR
 # https://docs.microsoft.com/en-us/azure/devops/pipelines/yaml-schema?view=azure-devops&tabs=schema%2Cparameter-schema#pr-trigger
@@ -30,17 +30,17 @@ stages:
       - job: make_build
         pool:
           # As we deploy on Wondows machines, we use Windows to build
-          vmImage: 'windows-2019'         
+          vmImage: 'windows-2019'
         steps:
         - template: templates/node-job-setup/template.yaml@pagopaCommons
         - script: |
             yarn build
           displayName: 'Build'
-  
+
   - stage: Static_analysis
     dependsOn: []
     jobs:
-      - job: lint     
+      - job: lint
         steps:
         - template: templates/node-job-setup/template.yaml@pagopaCommons
         - script: |
@@ -48,7 +48,7 @@ stages:
           displayName: 'Lint'
 
       - job: danger
-        condition: 
+        condition:
           and(
             succeeded(),
             ne(variables['DANGER_GITHUB_API_TOKEN'], 'skip')
@@ -70,7 +70,7 @@ stages:
       - job: unit_tests
         steps:
         - template: templates/node-job-setup/template.yaml@pagopaCommons
-        
+
         - script: |
             yarn generate
           displayName: 'Generate definitions'
@@ -82,3 +82,18 @@ stages:
         - bash: |
             bash <(curl -s https://codecov.io/bash)
           displayName: 'Code coverage'
+      - job: sql_schema_tests
+        steps:
+        - script: |
+            docker run --rm -d \
+              -e POSTGRES_DB=db \
+              -e POSTGRES_PASSWORD=mysecretpassword \
+              -p 5433:5432 \
+              postgres
+          displayName: 'Start PostgresSQL instance'
+
+        - script: |
+            ./scripts/run_flyway_on_server.sh migrate db localhost 5433 postgres mysecretpassword schema/migrations MySchema \
+              && echo "Migration successful" \
+              || { echo "Migration failed"; exit 1; }
+          displayName: 'Play migrations'
