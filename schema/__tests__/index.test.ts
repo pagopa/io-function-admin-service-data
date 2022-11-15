@@ -30,14 +30,16 @@ const aMigrationSelectSQL = (subscriptionId: string) => `
    SELECT * FROM "${env.DB_SCHEMA}"."${env.DB_NAME}" WHERE "subscriptionId"='${subscriptionId}'
 `;
 
-describe("it should select the first row", async () => {
-  const subscriptionId = aRandomSubscriptionId();
+describe("Test on db", () => {
+  it("should select the first row", async () => {
+    const subscriptionId = aRandomSubscriptionId();
 
-  await client.query(aMigrationInsertSQL(subscriptionId));
+    await client.query(aMigrationInsertSQL(subscriptionId));
 
-  const {
-    rows: [{ id: subscriptionRetrieved }]
-  } = await client.query(aMigrationSelectSQL(subscriptionId));
+    const {
+      rows: [{ id: subscriptionRetrieved }]
+    } = await client.query(aMigrationSelectSQL(subscriptionId));
 
-  expect(subscriptionRetrieved).toBe(subscriptionId);
+    expect(subscriptionRetrieved).toBe(subscriptionId);
+  });
 });
