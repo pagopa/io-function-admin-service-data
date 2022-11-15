@@ -84,6 +84,7 @@ stages:
           displayName: 'Code coverage'
       - job: sql_schema_tests
         steps:
+        - template: templates/node-job-setup/template.yaml@pagopaCommons
         - script: |
             docker run --rm -d \
               -e POSTGRES_DB=db \
@@ -91,6 +92,16 @@ stages:
               -p 5433:5432 \
               postgres
           displayName: 'Start PostgresSQL instance'
+        - script: |
+            DB_HOST=localhost \
+            DB_PORT=5432 \
+            DB_USER=postgres \
+            DB_PASSWORD=mysecretpassword \
+            DB_SCHEMA=MySchema \
+            DB_NAME=db \
+            yarn test:schema
+          displayName: 'SQL tests exec'
+
 
         - script: |
             ./scripts/run_flyway_on_server.sh migrate db localhost 5433 postgres mysecretpassword schema/migrations MySchema \
