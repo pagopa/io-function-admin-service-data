@@ -1,2 +1,2 @@
-ALTER TABLE "DeveloperPortalServiceData".services
+ALTER TABLE "${schemaName}".services
      ALTER COLUMN "authorizedCIDRS" JSON;
