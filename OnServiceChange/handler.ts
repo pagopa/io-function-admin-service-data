@@ -138,6 +138,14 @@ export const mapDataToTableRow = (
     readonly apimSubscription: ApimSubscriptionResponse;
   }
 ): MigrationRowDataTable => ({
+  authorizedCIDRS: Array.from(
+    retrievedDocument.authorizedCIDRs.values()
+  ).reduce(
+    (curr: { readonly ip: ReadonlyArray<string> }, v: string) => ({
+      ip: [...curr.ip, v]
+    }),
+    { ip: [] }
+  ),
   id: retrievedDocument.serviceId,
   isVisible: retrievedDocument.isVisible,
   name: retrievedDocument.serviceName,
@@ -161,10 +169,12 @@ export const createUpsertSql = (dbConfig: IDecodableConfigPostgreSQL) => (
     .insert(data)
     .onConflict("id")
     .merge([
+      "authorizedCIDRS",
       "organizationFiscalCode",
       "version",
       "name",
       "isVisible",
+      "requireSecureChannels",
       "subscriptionAccountId",
       "subscriptionAccountName",
       "subscriptionAccountSurname",
