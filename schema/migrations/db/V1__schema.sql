@@ -19,5 +19,5 @@ CREATE TABLE IF NOT EXISTS "${schemaName}".services
     "subscriptionAccountEmail" text,
 
     "updateAt" time without time zone DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT migrations_pkey PRIMARY KEY ("id")
+    CONSTRAINT servicedata_pkey PRIMARY KEY ("id")
 );
