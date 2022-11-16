@@ -2,10 +2,10 @@ import { Client } from "pg";
 import * as env from "./env";
 
 const client = new Client({
-  host: env.DB_HOST,
-  user: env.DB_USER,
-  password: env.DB_PASSWORD,
-  database: env.DB_NAME
+  host: "localhost", // env.DB_HOST,
+  user: "lorenzo", // env.DB_USER,
+  password: "password", //env.DB_PASSWORD,
+  database: "test" // env.DB_NAME
 });
 
 beforeAll(async () => {
@@ -21,8 +21,8 @@ const aRandomSubscriptionId = () => `a-sub-id-${Date.now()}`;
 // Dummy insert for a given subscriptionId
 const aMigrationInsertSQL = (subscriptionId: string) => `
     INSERT INTO "${env.DB_SCHEMA}"."${env.DB_TABLE}"(
-        "id", "organizationFiscalCode", "version", "name", "isVisible", "requireSecureChannels", "subscriptionAccountId", "subscriptionAccountName", "subscriptionAccountSurname", "subscriptionAccountEmail")
-        VALUES ('${subscriptionId}', '0000000000', 1, 'any name', false, false, 1, 'aName', 'aSurname','an@email.com')
+        "id", "organizationFiscalCode", "version", "name", "isVisible", "requireSecureChannels", "authorizedCIDRS","subscriptionAccountId", "subscriptionAccountName", "subscriptionAccountSurname", "subscriptionAccountEmail")
+        VALUES ('${subscriptionId}', '0000000000', 1, 'any name', false, false, '{ "ip": ["192.168.0.1", "192.168.1.1"]}', 1, 'aName', 'aSurname','an@email.com')
 `;
 
 // Select one record by subscriptionId
