@@ -92,20 +92,17 @@ stages:
               -p 5433:5432 \
               postgres
           displayName: 'Start PostgresSQL instance'
-
-
         - script: |
             ./scripts/run_flyway_on_server.sh migrate db localhost 5433 postgres mysecretpassword schema/migrations MySchema \
               && echo "Migration successful" \
               || { echo "Migration failed"; exit 1; }
           displayName: 'Play migrations'
-
         - script: |
-          DB_HOST=localhost \
-          DB_PORT=5432 \
-          DB_USER=postgres \
-          DB_PASSWORD=mysecretpassword \
-          DB_SCHEMA=MySchema \
-          DB_NAME=db \
-          yarn test:schema
-        displayName: 'SQL tests exec'
+            DB_HOST=localhost \
+            DB_PORT=5432 \
+            DB_USER=postgres \
+            DB_PASSWORD=mysecretpassword \
+            DB_SCHEMA=MySchema \
+            DB_NAME=db \
+            yarn test:schema
+          displayName: 'SQL tests exec'
