@@ -92,15 +92,6 @@ stages:
               -p 5433:5432 \
               postgres
           displayName: 'Start PostgresSQL instance'
-        - script: |
-            DB_HOST=localhost \
-            DB_PORT=5432 \
-            DB_USER=postgres \
-            DB_PASSWORD=mysecretpassword \
-            DB_SCHEMA=MySchema \
-            DB_NAME=db \
-            yarn test:schema
-          displayName: 'SQL tests exec'
 
 
         - script: |
@@ -108,3 +99,13 @@ stages:
               && echo "Migration successful" \
               || { echo "Migration failed"; exit 1; }
           displayName: 'Play migrations'
+
+        - script: |
+          DB_HOST=localhost \
+          DB_PORT=5432 \
+          DB_USER=postgres \
+          DB_PASSWORD=mysecretpassword \
+          DB_SCHEMA=MySchema \
+          DB_NAME=db \
+          yarn test:schema
+        displayName: 'SQL tests exec'
