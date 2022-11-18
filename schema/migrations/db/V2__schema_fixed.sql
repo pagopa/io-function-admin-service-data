@@ -1,2 +1,2 @@
 ALTER TABLE "${schemaName}".services
-     ALTER COLUMN "authorizedCIDRS" JSON;
+     ALTER COLUMN "authorizedCIDRS" TYPE json;
