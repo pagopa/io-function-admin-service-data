@@ -5,11 +5,14 @@ const client = new Client({
   host: env.DB_HOST,
   user: env.DB_USER,
   password: env.DB_PASSWORD,
-  database: env.DB_NAME
+  database: env.DB_NAME,
+  port: parseInt(env.DB_PORT)
 });
 
 beforeAll(async () => {
-  await client.connect();
+  await client.connect(err => {
+    console.log(err);
+  });
 });
 
 afterAll(async () => {

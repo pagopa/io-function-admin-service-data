@@ -7,7 +7,7 @@ const envOrThrow = (key: string, defValue?: string): string => {
 };
 
 export const DB_HOST = envOrThrow("DB_HOST", "localhost");
-export const DB_PORT = envOrThrow("DB_PORT", "5432");
+export const DB_PORT = envOrThrow("DB_PORT", "5433");
 export const DB_USER = envOrThrow("DB_USER");
 export const DB_PASSWORD = envOrThrow("DB_PASSWORD");
 export const DB_NAME = envOrThrow("DB_NAME", "db");
