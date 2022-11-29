@@ -16,6 +16,7 @@
     "dev": "npm-run-all --parallel start watch",
     "test": "jest",
     "test:coverage": "jest --coverage",
+    "test:schema": "jest --config=jest.config.schema.js ",
     "lint": "eslint . -c .eslintrc.js --ext .ts,.tsx --cache",
     "lint-api": "oval validate -p openapi/index.yaml",
     "dist:modules": "modclean -r -n default:safe && yarn install --production",
