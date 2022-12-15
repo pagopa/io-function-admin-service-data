@@ -20,3 +20,6 @@ ALTER TABLE "${schemaName}".services
   ADD COLUMN "serviceMetadata_tosUrl" character varying,
   ADD COLUMN "serviceMetadata_webUrl" character varying,
   ADD COLUMN "serviceMetadata_customSpecialFlow" character varying;
+
+-- to reach better performance for our query we decide to define an index on isVisible field to facilitate the retrieving only visible documents
+CREATE INDEX "isVisible_index" ON "${schemaName}".services ("isVisible");
