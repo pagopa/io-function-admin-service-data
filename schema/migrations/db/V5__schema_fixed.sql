@@ -11,3 +11,6 @@ ALTER TABLE "${schemaName}".services
 -- to reach better performance for our query we decide to define an index on isVisible field to facilitate the retrieving only visible documents
 CREATE INDEX "isVisible_index" ON "${schemaName}".services USING hash ("isVisible")
 WHERE "isVisible" is true;
+
+ALTER TABLE "${schemaName}".services DROP CONSTRAINT "servicedata_pkey";
+ALTER TABLE "${schemaName}".services ADD CONSTRAINT "servicedata_pkey" PRIMARY KEY ("serviceId");
