@@ -225,11 +225,12 @@ export const storeDocumentApimToDatabase = (
           apimSubscription,
           telemetryClient
         ),
-        TE.chainW(apimUser => {
-          const quality = getQuality(retrievedDocument);
-          return pipe(
+        TE.chainW(apimUser =>
+          TE.of({ apimUser, quality: getQuality(retrievedDocument) })
+        ),
+        TE.chainW(({ apimUser, quality }) =>
+          pipe(
             { apimSubscription, apimUser },
-
             apimData => mapDataToTableRow(retrievedDocument, quality, apimData),
             createUpsertSql(config),
             sql => queryDataTable(pool, sql),
@@ -240,8 +241,8 @@ export const storeDocumentApimToDatabase = (
               );
               return toPostgreSQLError(err.message);
             })
-          );
-        })
+          )
+        )
       )
     ),
     // check errors to see if we might fail or just ignore current document
