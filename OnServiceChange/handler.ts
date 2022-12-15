@@ -5,11 +5,14 @@ import * as TE from "fp-ts/lib/TaskEither";
 import * as RA from "fp-ts/lib/ReadonlyArray";
 import knex from "knex";
 import { NonEmptyString } from "@pagopa/ts-commons/lib/strings";
-import { RetrievedService } from "@pagopa/io-functions-commons/dist/src/models/service";
+import {
+  RetrievedService,
+  ValidService
+} from "@pagopa/io-functions-commons/dist/src/models/service";
 import { ErrorResponse as ApimErrorResponse } from "@azure/arm-apimanagement";
 import { Pool, QueryResult } from "pg";
 import { Context } from "@azure/functions";
-import { MigrationRowDataTable } from "../models/Domain";
+import { ServiceRowDataTable } from "../models/Domain";
 import { IConfig, IDecodableConfigPostgreSQL } from "../utils/config";
 import {
   ApimSubscriptionResponse,
@@ -133,16 +136,25 @@ export const getApimUserBySubscriptionResponse = (
 
 export const mapDataToTableRow = (
   retrievedDocument: RetrievedService,
+  quality: number,
   apimData: {
     readonly apimUser: ApimUserResponse;
     readonly apimSubscription: ApimSubscriptionResponse;
   }
-): MigrationRowDataTable => ({
-  id: retrievedDocument.serviceId,
+): ServiceRowDataTable => ({
+  departmentName: retrievedDocument.departmentName,
+  description: retrievedDocument.serviceMetadata?.description,
+  id: retrievedDocument.id,
   isVisible: retrievedDocument.isVisible,
+  maxAllowedPaymentAmount: retrievedDocument.maxAllowedPaymentAmount,
   name: retrievedDocument.serviceName,
   organizationFiscalCode: retrievedDocument.organizationFiscalCode,
+  organizationName: retrievedDocument.organizationName,
+  quality,
   requireSecureChannels: retrievedDocument.requireSecureChannels,
+  scope: retrievedDocument.serviceMetadata?.scope as NonEmptyString,
+  serviceId: retrievedDocument.serviceId,
+  serviceMetadata: retrievedDocument.serviceMetadata,
   subscriptionAccountEmail: apimData.apimUser.email,
   subscriptionAccountId: apimData.apimSubscription.ownerId,
   subscriptionAccountName: apimData.apimUser.firstName,
@@ -151,7 +163,7 @@ export const mapDataToTableRow = (
 });
 
 export const createUpsertSql = (dbConfig: IDecodableConfigPostgreSQL) => (
-  data: MigrationRowDataTable
+  data: ServiceRowDataTable
 ): NonEmptyString =>
   knex({
     client: "pg"
@@ -159,16 +171,25 @@ export const createUpsertSql = (dbConfig: IDecodableConfigPostgreSQL) => (
     .withSchema(dbConfig.DB_SCHEMA)
     .table(dbConfig.DB_TABLE)
     .insert(data)
-    .onConflict("id")
+    .onConflict("serviceId")
     .merge([
-      "organizationFiscalCode",
-      "version",
-      "name",
+      "departmentName",
+      "description",
+      "id",
       "isVisible",
+      "maxAllowedPaymentAmount",
+      "name",
+      "organizationFiscalCode",
+      "organizationName",
+      "quality",
+      "scope",
+      "serviceId",
+      "serviceMetadata",
+      "subscriptionAccountEmail",
       "subscriptionAccountId",
       "subscriptionAccountName",
       "subscriptionAccountSurname",
-      "subscriptionAccountEmail"
+      "version"
     ])
     .whereRaw(`"${dbConfig.DB_TABLE}"."version" < excluded."version"`)
     .toQuery() as NonEmptyString;
@@ -176,6 +197,15 @@ export const createUpsertSql = (dbConfig: IDecodableConfigPostgreSQL) => (
 const isSubscriptionNotFound = (err: DomainError): boolean =>
   err.kind === "apimsuberror" &&
   err.message.startsWith("Subscription not found");
+
+export const getQuality = (retrievedDocument: RetrievedService): number =>
+  pipe(
+    ValidService.decode(retrievedDocument),
+    E.fold(
+      _ => 0, // quality ko
+      _ => 1 // quality ok
+    )
+  );
 
 export const storeDocumentApimToDatabase = (
   apimClient: IApimConfig,
@@ -197,10 +227,12 @@ export const storeDocumentApimToDatabase = (
           apimSubscription,
           telemetryClient
         ),
-        TE.chainW(apimUser =>
-          pipe(
+        TE.chainW(apimUser => {
+          const quality = getQuality(retrievedDocument);
+          return pipe(
             { apimSubscription, apimUser },
-            apimData => mapDataToTableRow(retrievedDocument, apimData),
+
+            apimData => mapDataToTableRow(retrievedDocument, quality, apimData),
             createUpsertSql(config),
             sql => queryDataTable(pool, sql),
             TE.mapLeft(err => {
@@ -210,8 +242,8 @@ export const storeDocumentApimToDatabase = (
               );
               return toPostgreSQLError(err.message);
             })
-          )
-        )
+          );
+        })
       )
     ),
     // check errors to see if we might fail or just ignore current document
