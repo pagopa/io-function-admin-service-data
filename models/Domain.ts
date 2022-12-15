@@ -9,6 +9,7 @@ import { ServiceSearchItem } from "../generated/definitions/ServiceSearchItem";
 export type MigrationRowDataTable = t.TypeOf<typeof MigrationRowDataTable>;
 export const MigrationRowDataTable = t.interface({
   // data related to the subscription received from COSMOS
+  authorizedCIDRS: t.interface({ ip: t.readonlyArray(t.string) }),
   id: NonEmptyString,
   isVisible: t.boolean,
   name: NonEmptyString,

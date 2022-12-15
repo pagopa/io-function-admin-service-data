@@ -33,6 +33,7 @@ const mockOrganizationFiscalCode = "01234567891" as OrganizationFiscalCode;
 const mockOwnerId = "/subscriptions/subid/resourceGroups/resourceGroupName/providers/Microsoft.ApiManagement/service/apimServiceName/users/00000000000000000000000000" as NonEmptyString;
 
 const mockRetrieveDocument = {
+  authorizedCIDRs: ["192.168.0.1/32", "192.168.1.1/32"] as unknown,
   isVisible: true,
   requireSecureChannels: true,
   serviceId: mockSubscriptionId,
@@ -80,23 +81,6 @@ const mockApim = {
   client: mockApimClient
 };
 
-const mockDocuments = [
-  {
-    subscriptionId: "00000000000000000000000000" as NonEmptyString,
-    organizationFiscalCode: "11111111111" as OrganizationFiscalCode,
-    serviceName: "Service Test 1 " as NonEmptyString
-  },
-  {
-    subscriptionId: "00000000000000000000000001" as NonEmptyString,
-    organizationFiscalCode: "00000000000" as OrganizationFiscalCode,
-    serviceName: "Service Test 2.1" as NonEmptyString
-  },
-  {
-    subscriptionI: "00000000000000000000000002" as NonEmptyString,
-    organizationFiscalCode: "00000000000" as OrganizationFiscalCode,
-    serviceName: "Service Test 2.2" as NonEmptyString
-  }
-];
 const mockConfig = {};
 const mockQueryResult = {
   command: "INSERT",
@@ -142,16 +126,21 @@ describe("createUpsertSql", () => {
     } as IDecodableConfigPostgreSQL;
     const data = ({
       id: "subId1",
+      authorizedCIDRS: ["192.168.1.1/32", "10.0.0.1/24", "0.0.0.0/0"].reduce(
+        (curr: { ip: Array<string> }, v: string) => ({ ip: [...curr.ip, v] }),
+        { ip: [] }
+      ),
       isVisible: true,
       name: "Service Test",
       organizationFiscalCode: "12345678901",
+      requireSecureChannels: false,
       subscriptionAccountId: "00000000000000000000000000",
       subscriptionAccountName: "source name",
       subscriptionAccountSurname: "source surname",
       subscriptionAccountEmail: "source email",
       version: 0
     } as unknown) as MigrationRowDataTable;
-    const expected = `insert into "ServiceData"."Export" ("id", "isVisible", "name", "organizationFiscalCode", "subscriptionAccountEmail", "subscriptionAccountId", "subscriptionAccountName", "subscriptionAccountSurname", "version") values ('subId1', true, 'Service Test', '12345678901', 'source email', '00000000000000000000000000', 'source name', 'source surname', 0) on conflict ("id") do update set "organizationFiscalCode" = excluded."organizationFiscalCode", "version" = excluded."version", "name" = excluded."name", "isVisible" = excluded."isVisible", "subscriptionAccountId" = excluded."subscriptionAccountId", "subscriptionAccountName" = excluded."subscriptionAccountName", "subscriptionAccountSurname" = excluded."subscriptionAccountSurname", "subscriptionAccountEmail" = excluded."subscriptionAccountEmail" where "Export"."version" < excluded."version"`;
+    const expected = `insert into "ServiceData"."Export" ("authorizedCIDRS", "id", "isVisible", "name", "organizationFiscalCode", "requireSecureChannels", "subscriptionAccountEmail", "subscriptionAccountId", "subscriptionAccountName", "subscriptionAccountSurname", "version") values ('{\"ip\":[\"192.168.1.1/32\",\"10.0.0.1/24\",\"0.0.0.0/0\"]}', 'subId1', true, 'Service Test', '12345678901', false, 'source email', '00000000000000000000000000', 'source name', 'source surname', 0) on conflict ("id") do update set "authorizedCIDRS" = excluded."authorizedCIDRS", "organizationFiscalCode" = excluded."organizationFiscalCode", "version" = excluded."version", "name" = excluded."name", "isVisible" = excluded."isVisible", "requireSecureChannels" = excluded."requireSecureChannels", "subscriptionAccountId" = excluded."subscriptionAccountId", "subscriptionAccountName" = excluded."subscriptionAccountName", "subscriptionAccountSurname" = excluded."subscriptionAccountSurname", "subscriptionAccountEmail" = excluded."subscriptionAccountEmail" where "Export"."version" < excluded."version"`;
 
     const sql = createUpsertSql(config)(data);
     expect(sql.trim()).toBe(expected.trim());
@@ -242,7 +231,7 @@ describe("storeDocumentApimToDatabase", () => {
       mockConfig as any,
       mockClientPool,
       mockTelemtryClient as any
-    )(mockDocuments[0] as any)();
+    )(mockRetrieveDocument as any)();
     expect(isRight(res)).toBe(true);
     if (isRight(res)) {
       expect(res.right).toHaveProperty("command", "INSERT");
