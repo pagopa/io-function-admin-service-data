@@ -34,7 +34,7 @@ const mockOrganizationFiscalCode = "01234567891" as OrganizationFiscalCode;
 const mockOwnerId = "/subscriptions/subid/resourceGroups/resourceGroupName/providers/Microsoft.ApiManagement/service/apimServiceName/users/00000000000000000000000000" as NonEmptyString;
 
 const mockRetrieveDocument = ({
-  id: mockSubscriptionId + "00000000001",
+  authorizedCIDRs: ["192.168.0.1/32", "192.168.1.1/32"] as unknown,
   isVisible: true,
   requireSecureChannels: true,
   serviceId: mockSubscriptionId,
@@ -66,7 +66,7 @@ const mockApimDelegateUserReponse = {
 } as ApimDelegateUserResponse;
 
 const mockServiceRowDataTable = {
-  id: mockSubscriptionId + "00000000001",
+  id: mockSubscriptionId,
   isVisible: true,
   requireSecureChannels: true,
   organizationFiscalCode: mockOrganizationFiscalCode,
@@ -74,7 +74,6 @@ const mockServiceRowDataTable = {
   subscriptionAccountName: "NomeDelegato" as NonEmptyString,
   subscriptionAccountSurname: "CognomeDelegato" as NonEmptyString,
   subscriptionAccountEmail: "email@test.com" as EmailString,
-  serviceId: mockSubscriptionId,
   description: "A description field that describe the service and what kind of message it can sends to the users" as NonEmptyString,
   scope: "LOCAL" as NonEmptyString,
   departmentName: "Department Name",
@@ -164,8 +163,11 @@ describe("createUpsertSql", () => {
       DB_TABLE: "Export"
     } as IDecodableConfigPostgreSQL;
     const retrievedService = ({
-      id: "subId1-00000000001",
-      serviceId: "1234567890",
+      id: "1234567890",
+      authorizedCIDRS: ["192.168.1.1/32", "10.0.0.1/24", "0.0.0.0/0"].reduce(
+        (curr: { ip: Array<string> }, v: string) => ({ ip: [...curr.ip, v] }),
+        { ip: [] }
+      ),
       isVisible: true,
       name: "Service Test",
       organizationFiscalCode: "12345678901",
@@ -180,7 +182,7 @@ describe("createUpsertSql", () => {
       subscriptionAccountEmail: "source email",
       version: 0
     } as unknown) as ServiceRowDataTable;
-    const expected = `insert into "ServiceData"."Export" ("description", "id", "isVisible", "maxAllowedPaymentAmount", "name", "organizationFiscalCode", "organizationName", "quality", "scope", "serviceId", "subscriptionAccountEmail", "subscriptionAccountId", "subscriptionAccountName", "subscriptionAccountSurname", "version") values ('A description service that blah blah blah....', 'subId1-00000000001', true, 0, 'Service Test', '12345678901', 'A company name', 1, 'LOCAL', '1234567890', 'source email', '00000000000000000000000000', 'source name', 'source surname', 0) on conflict ("serviceId") do update set "departmentName" = excluded."departmentName", "description" = excluded."description", "id" = excluded."id", "isVisible" = excluded."isVisible", "maxAllowedPaymentAmount" = excluded."maxAllowedPaymentAmount", "name" = excluded."name", "organizationFiscalCode" = excluded."organizationFiscalCode", "organizationName" = excluded."organizationName", "quality" = excluded."quality", "scope" = excluded."scope", "serviceId" = excluded."serviceId", "serviceMetadata" = excluded."serviceMetadata", "subscriptionAccountEmail" = excluded."subscriptionAccountEmail", "subscriptionAccountId" = excluded."subscriptionAccountId", "subscriptionAccountName" = excluded."subscriptionAccountName", "subscriptionAccountSurname" = excluded."subscriptionAccountSurname", "version" = excluded."version" where "Export"."version" < excluded."version"`;
+    const expected = `insert into "ServiceData"."Export" ("authorizedCIDRS", "description", "id", "isVisible", "maxAllowedPaymentAmount", "name", "organizationFiscalCode", "organizationName", "quality", "scope", "subscriptionAccountEmail", "subscriptionAccountId", "subscriptionAccountName", "subscriptionAccountSurname", "version") values ('{\"ip\":[\"192.168.1.1/32\",\"10.0.0.1/24\",\"0.0.0.0/0\"]}', 'A description service that blah blah blah....', '1234567890', true, 0, 'Service Test', '12345678901', 'A company name', 1, 'LOCAL', 'source email', '00000000000000000000000000', 'source name', 'source surname', 0) on conflict ("id") do update set "authorizedCIDRS" = excluded."authorizedCIDRS", "departmentName" = excluded."departmentName", "description" = excluded."description", "isVisible" = excluded."isVisible", "maxAllowedPaymentAmount" = excluded."maxAllowedPaymentAmount", "name" = excluded."name", "organizationFiscalCode" = excluded."organizationFiscalCode", "organizationName" = excluded."organizationName", "quality" = excluded."quality", "scope" = excluded."scope", "serviceMetadata" = excluded."serviceMetadata", "subscriptionAccountEmail" = excluded."subscriptionAccountEmail", "subscriptionAccountId" = excluded."subscriptionAccountId", "subscriptionAccountName" = excluded."subscriptionAccountName", "subscriptionAccountSurname" = excluded."subscriptionAccountSurname", "version" = excluded."version" where "Export"."version" < excluded."version"`;
 
     const sql = createUpsertSql(config)(retrievedService);
     expect(sql.trim()).toBe(expected.trim());

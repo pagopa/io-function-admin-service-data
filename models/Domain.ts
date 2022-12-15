@@ -24,7 +24,6 @@ export const ServiceFieldR = t.interface({
   maxAllowedPaymentAmount: t.number,
   organizationName: NonEmptyString,
   quality: t.number,
-  serviceId: NonEmptyString,
 
   // data related to the APIM account that owns the related subscription
   // eslint-disable-next-line sort-keys

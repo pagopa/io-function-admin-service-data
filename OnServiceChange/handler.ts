@@ -144,7 +144,7 @@ export const mapDataToTableRow = (
 ): ServiceRowDataTable => ({
   departmentName: retrievedDocument.departmentName,
   description: retrievedDocument.serviceMetadata?.description,
-  id: retrievedDocument.id,
+  id: retrievedDocument.serviceId,
   isVisible: retrievedDocument.isVisible,
   maxAllowedPaymentAmount: retrievedDocument.maxAllowedPaymentAmount,
   name: retrievedDocument.serviceName,
@@ -153,7 +153,6 @@ export const mapDataToTableRow = (
   quality,
   requireSecureChannels: retrievedDocument.requireSecureChannels,
   scope: retrievedDocument.serviceMetadata?.scope as NonEmptyString,
-  serviceId: retrievedDocument.serviceId,
   serviceMetadata: retrievedDocument.serviceMetadata,
   subscriptionAccountEmail: apimData.apimUser.email,
   subscriptionAccountId: apimData.apimSubscription.ownerId,
@@ -171,11 +170,11 @@ export const createUpsertSql = (dbConfig: IDecodableConfigPostgreSQL) => (
     .withSchema(dbConfig.DB_SCHEMA)
     .table(dbConfig.DB_TABLE)
     .insert(data)
-    .onConflict("serviceId")
+    .onConflict("id")
     .merge([
+      "authorizedCIDRS",
       "departmentName",
       "description",
-      "id",
       "isVisible",
       "maxAllowedPaymentAmount",
       "name",
@@ -183,7 +182,6 @@ export const createUpsertSql = (dbConfig: IDecodableConfigPostgreSQL) => (
       "organizationName",
       "quality",
       "scope",
-      "serviceId",
       "serviceMetadata",
       "subscriptionAccountEmail",
       "subscriptionAccountId",
