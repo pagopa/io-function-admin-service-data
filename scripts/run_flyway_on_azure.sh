@@ -55,8 +55,8 @@ az account set -s "${AZ_SUBSCRIPTION}"
 # shellcheck disable=SC2154
 printf "Subscription: %s\n" "${AZ_SUBSCRIPTION}"
 
-psql_server_name=$(az postgres server list -o tsv --query "[?contains(name,'$AZ_POSTGRES_RESOURCE_NAME')].{Name:name}" | head -1)
-psql_server_private_fqdn=$(az postgres server list -o tsv --query "[?contains(name,'$AZ_POSTGRES_RESOURCE_NAME')].{Name:fullyQualifiedDomainName}" | head -1)
+psql_server_name=$(az postgres flexible-server list -o tsv --query "[?contains(name,'$AZ_POSTGRES_RESOURCE_NAME')].{Name:name}" | head -1)
+psql_server_private_fqdn=$(az postgres flexible-server list -o tsv --query "[?contains(name,'$AZ_POSTGRES_RESOURCE_NAME')].{Name:fullyQualifiedDomainName}" | head -1)
 keyvault_name=$(az keyvault list -o tsv --query "[?contains(name,'$KV_NAME')].{Name:name}")
 
 # in widows, even if using cygwin, these variables will contain a landing \r character
