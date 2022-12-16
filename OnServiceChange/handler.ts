@@ -273,7 +273,7 @@ const handler = (
   apimClient: IApimConfig,
   pool: Pool,
   telemetryClient: ReturnType<typeof initTelemetryClient>
-) => async (document: RetrievedService): Promise<void> =>
+) => (document: RetrievedService): TE.TaskEither<unknown, void> =>
   pipe(
     document,
     trace(trackIncomingServiceDocument(telemetryClient)),
@@ -283,22 +283,26 @@ const handler = (
       return void 0; /* we expect no return */
     }),
     // let the handler fail
-    TE.getOrElse(err => {
+    TE.mapLeft(err => {
       trackFailedServiceDocumentProcessing(telemetryClient)(document);
-      throw err;
+      return err;
     })
-  )();
+  );
 
 const OnServiceChangeHandler = (
   telemetryClient: ReturnType<typeof initTelemetryClient>
-) => (config: IConfig, apimClient: IApimConfig, pool: Pool) => async (
+) => (config: IConfig, apimClient: IApimConfig, pool: Pool) => (
   context: Context,
   documents: ReadonlyArray<RetrievedService>
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<any> =>
   pipe(
     Array.isArray(documents) ? documents : [documents],
-    RA.map(d => handler(config, apimClient, pool, telemetryClient)(d))
-  );
+    RA.map(d => handler(config, apimClient, pool, telemetryClient)(d)),
+    RA.sequence(TE.ApplicativePar),
+    TE.getOrElse(err => {
+      throw err instanceof Error ? err : new Error(`${err}`);
+    })
+  )();
 
 export default OnServiceChangeHandler;

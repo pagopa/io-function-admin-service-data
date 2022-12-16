@@ -143,19 +143,6 @@ const mockContext = {
   executionContext: { functionName: jest.fn() }
 };
 
-describe("Handler", () => {
-  it("should return a Function", async () => {
-    const apim = (mockApim as unknown) as IApimConfig;
-    const mockClientPool = await mockPool.connect();
-    const handler = await OnServiceChangeHandler(mockTelemtryClient as any)(
-      mockConfig as any,
-      apim,
-      mockClientPool
-    )((mockContext as unknown) as Context, (void 0 as unknown) as any);
-    expect(handler).toBeInstanceOf(Array);
-  });
-});
-
 describe("createUpsertSql", () => {
   it("should compose correct upsert sql", async () => {
     const config = {

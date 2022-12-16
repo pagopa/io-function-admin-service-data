@@ -102,7 +102,7 @@ export const trackIncomingServiceDocument = (
   pipe(
     service,
     serviceEvent("developerportal.servicedata.incoming-service-document"),
-    telemetryClient.trackEvent
+    _ => telemetryClient.trackEvent(_)
   );
 
 /**
@@ -117,7 +117,7 @@ export const trackProcessedServiceDocument = (
   pipe(
     service,
     serviceEvent("developerportal.servicedata.processed-service-document"),
-    telemetryClient.trackEvent
+    _ => telemetryClient.trackEvent(_)
   );
 
 /**
@@ -134,5 +134,5 @@ export const trackFailedServiceDocumentProcessing = (
     serviceEvent(
       "developerportal.servicedata.failed-service-document-processing"
     ),
-    telemetryClient.trackEvent
+    _ => telemetryClient.trackEvent(_)
   );
