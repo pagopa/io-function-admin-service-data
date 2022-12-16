@@ -225,9 +225,10 @@ export const storeDocumentApimToDatabase = (
           apimSubscription,
           telemetryClient
         ),
-        TE.chainW(apimUser =>
-          TE.of({ apimUser, quality: getQuality(retrievedDocument) })
-        ),
+        TE.map(apimUser => ({
+          apimUser,
+          quality: getQuality(retrievedDocument)
+        })),
         TE.chainW(({ apimUser, quality }) =>
           pipe(
             { apimSubscription, apimUser },
