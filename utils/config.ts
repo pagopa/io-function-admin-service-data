@@ -9,6 +9,7 @@ import * as t from "io-ts";
 
 import * as E from "fp-ts/lib/Either";
 import { pipe } from "fp-ts/lib/function";
+import { CommaSeparatedListOf } from "@pagopa/ts-commons/lib/comma-separated-list";
 
 import { readableReport } from "@pagopa/ts-commons/lib/reporters";
 import { NonEmptyString } from "@pagopa/ts-commons/lib/strings";
@@ -46,6 +47,13 @@ export const IDecodableConfigAPIM = t.interface({
   APIM_TENANT_ID: NonEmptyString
 });
 
+// Environment configuration to connect to Azure Storage Account
+export type IDecodableConfigStorage = t.TypeOf<typeof IDecodableConfigStorage>;
+export const IDecodableConfigStorage = t.interface({
+  VISIBLE_SERVICES_COMPACT_STORAGE_PATH: NonEmptyString,
+  VISIBLE_SERVICES_EXTENDED_STORAGE_PATH: NonEmptyString
+});
+
 // Environment configuration to connect to Application Insight instance
 //   needed in order to monitoring basic events and custom events
 export type IDecodableConfigAppInsight = t.TypeOf<
@@ -69,13 +77,17 @@ export const IConfig = t.intersection([
   IDecodableConfigPostgreSQL,
   IDecodableConfigAPIM,
   IDecodableConfigAppInsight,
+  IDecodableConfigStorage,
   t.interface({
     AzureWebJobsStorage: NonEmptyString,
 
     COSMOSDB_KEY: NonEmptyString,
     COSMOSDB_NAME: NonEmptyString,
     COSMOSDB_URI: NonEmptyString,
-
+    SERVICEID_EXCLUSION_LIST: withDefault(
+      CommaSeparatedListOf(NonEmptyString),
+      []
+    ),
     isProduction: t.boolean
   })
 ]);
