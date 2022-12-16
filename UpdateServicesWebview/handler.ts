@@ -7,15 +7,3 @@ export const UpdateServicesWebview = (
   _serviceIdExclusionList: ReadonlyArray<NonEmptyString>
 ) => async (_context: Context): Promise<unknown> =>
   pipe(TE.throwError<string, string>("To be Implementend"))();
-
-/*
-const handler = (): Handler => (): ReturnType<Handler> =>
-  pipe(
-    TE.throwError<
-      string,
-      IResponseSuccessJson<{ readonly data: OrganizationDelegates }>
-    >("To be Implementend"),
-    TE.mapLeft(ResponseErrorInternal),
-    TE.toUnion
-  )();
-  */
