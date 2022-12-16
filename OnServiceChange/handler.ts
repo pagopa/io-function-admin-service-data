@@ -189,7 +189,7 @@ export const createUpsertSql = (dbConfig: IDecodableConfigPostgreSQL) => (
       "subscriptionAccountSurname",
       "version"
     ])
-    .whereRaw(`"${dbConfig.DB_TABLE}"."version" < excluded."version"`)
+    .whereRaw(`"${dbConfig.DB_TABLE}"."version" <= excluded."version"`)
     .toQuery() as NonEmptyString;
 
 const isSubscriptionNotFound = (err: DomainError): boolean =>
