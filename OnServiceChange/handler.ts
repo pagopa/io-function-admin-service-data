@@ -31,9 +31,13 @@ import {
 import { queryDataTable } from "../utils/db";
 import { initTelemetryClient } from "../utils/appinsight";
 import {
+  trace,
   trackFailApimUserBySubscriptionResponse,
   trackFailDecode,
-  trackGenericError
+  trackFailedServiceDocumentProcessing,
+  trackGenericError,
+  trackIncomingServiceDocument,
+  trackProcessedServiceDocument
 } from "../utils/tracking";
 
 /*
@@ -272,11 +276,15 @@ const handler = (
 ) => async (document: RetrievedService): Promise<void> =>
   pipe(
     document,
+    trace(trackIncomingServiceDocument(telemetryClient)),
     storeDocumentApimToDatabase(apimClient, config, pool, telemetryClient),
-    TE.map(_ => void 0 /* we expect no return */),
+    TE.map(_ => {
+      trackProcessedServiceDocument(telemetryClient)(document);
+      return void 0; /* we expect no return */
+    }),
     // let the handler fail
     TE.getOrElse(err => {
-      trackGenericError(telemetryClient)("Error on handler", err.message);
+      trackFailedServiceDocumentProcessing(telemetryClient)(document);
       throw err;
     })
   )();
