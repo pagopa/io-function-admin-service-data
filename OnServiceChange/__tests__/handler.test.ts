@@ -5,7 +5,7 @@ import {
   NonEmptyString,
   OrganizationFiscalCode
 } from "@pagopa/ts-commons/lib/strings";
-import { MigrationRowDataTable } from "../../models/Domain";
+import { ServiceRowDataTable } from "../../models/Domain";
 import {
   ApimSubscriptionResponse,
   ApimDelegateUserResponse,
@@ -18,6 +18,7 @@ import {
 import OnServiceChangeHandler, {
   getApimOwnerIdBySubscriptionId,
   getApimUserBySubscriptionResponse,
+  getQuality,
   mapDataToTableRow,
   parseOwnerIdFullPath,
   storeDocumentApimToDatabase
@@ -32,13 +33,27 @@ const mockSubscriptionId = "00000000000000000000000000" as NonEmptyString;
 const mockOrganizationFiscalCode = "01234567891" as OrganizationFiscalCode;
 const mockOwnerId = "/subscriptions/subid/resourceGroups/resourceGroupName/providers/Microsoft.ApiManagement/service/apimServiceName/users/00000000000000000000000000" as NonEmptyString;
 
-const mockRetrieveDocument = {
+const mockRetrieveDocument = ({
+  authorizedCIDRs: ["192.168.0.1/32", "192.168.1.1/32"] as unknown,
   isVisible: true,
   requireSecureChannels: true,
   serviceId: mockSubscriptionId,
   organizationFiscalCode: mockOrganizationFiscalCode,
-  version: 0 as NonNegativeInteger
-} as RetrievedService;
+  version: 0 as NonNegativeInteger,
+  serviceMetadata: {
+    description:
+      "A description field that describe the service and what kind of message it can sends to the users",
+    scope: "LOCAL",
+    privacyUrl: "https://www.pricavy.url",
+    tosUrl: "https://www.tos.url",
+    email: "anemail@email.com",
+    phone: "+390000000000"
+  },
+  departmentName: "Department Name",
+  maxAllowedPaymentAmount: 0,
+  serviceName: "Service Name",
+  organizationName: "An Organization Name"
+} as unknown) as RetrievedService;
 const mockApimSubscriptionResponse = {
   subscriptionId: mockSubscriptionId,
   ownerId: mockOwnerId
@@ -49,7 +64,8 @@ const mockApimDelegateUserReponse = {
   lastName: "CognomeDelegato" as NonEmptyString,
   email: "email@test.com" as EmailString
 } as ApimDelegateUserResponse;
-const mockMigrationRowDataTable = {
+
+const mockServiceRowDataTable = {
   id: mockSubscriptionId,
   isVisible: true,
   requireSecureChannels: true,
@@ -57,7 +73,13 @@ const mockMigrationRowDataTable = {
   subscriptionAccountId: mockOwnerId,
   subscriptionAccountName: "NomeDelegato" as NonEmptyString,
   subscriptionAccountSurname: "CognomeDelegato" as NonEmptyString,
-  subscriptionAccountEmail: "email@test.com" as EmailString
+  subscriptionAccountEmail: "email@test.com" as EmailString,
+  description: "A description field that describe the service and what kind of message it can sends to the users" as NonEmptyString,
+  scope: "LOCAL" as NonEmptyString,
+  departmentName: "Department Name",
+  maxAllowedPaymentAmount: 0,
+  name: "Service Name",
+  organizationName: "An Organization Name"
 };
 
 const mockApimSubscriptionGet = jest.fn(() =>
@@ -140,32 +162,40 @@ describe("createUpsertSql", () => {
       DB_SCHEMA: "ServiceData",
       DB_TABLE: "Export"
     } as IDecodableConfigPostgreSQL;
-    const data = ({
-      id: "subId1",
+    const retrievedService = ({
+      id: "1234567890",
+      authorizedCIDRS: ["192.168.1.1/32", "10.0.0.1/24", "0.0.0.0/0"].reduce(
+        (curr: { ip: Array<string> }, v: string) => ({ ip: [...curr.ip, v] }),
+        { ip: [] }
+      ),
       isVisible: true,
       name: "Service Test",
       organizationFiscalCode: "12345678901",
+      organizationName: "A company name",
+      scope: "LOCAL",
+      quality: 1,
+      maxAllowedPaymentAmount: 0,
+      description: "A description service that blah blah blah....",
       subscriptionAccountId: "00000000000000000000000000",
       subscriptionAccountName: "source name",
       subscriptionAccountSurname: "source surname",
       subscriptionAccountEmail: "source email",
       version: 0
-    } as unknown) as MigrationRowDataTable;
-    const expected = `insert into "ServiceData"."Export" ("id", "isVisible", "name", "organizationFiscalCode", "subscriptionAccountEmail", "subscriptionAccountId", "subscriptionAccountName", "subscriptionAccountSurname", "version") values ('subId1', true, 'Service Test', '12345678901', 'source email', '00000000000000000000000000', 'source name', 'source surname', 0) on conflict ("id") do update set "organizationFiscalCode" = excluded."organizationFiscalCode", "version" = excluded."version", "name" = excluded."name", "isVisible" = excluded."isVisible", "subscriptionAccountId" = excluded."subscriptionAccountId", "subscriptionAccountName" = excluded."subscriptionAccountName", "subscriptionAccountSurname" = excluded."subscriptionAccountSurname", "subscriptionAccountEmail" = excluded."subscriptionAccountEmail" where "Export"."version" < excluded."version"`;
+    } as unknown) as ServiceRowDataTable;
+    const expected = `insert into "ServiceData"."Export" ("authorizedCIDRS", "description", "id", "isVisible", "maxAllowedPaymentAmount", "name", "organizationFiscalCode", "organizationName", "quality", "scope", "subscriptionAccountEmail", "subscriptionAccountId", "subscriptionAccountName", "subscriptionAccountSurname", "version") values ('{\"ip\":[\"192.168.1.1/32\",\"10.0.0.1/24\",\"0.0.0.0/0\"]}', 'A description service that blah blah blah....', '1234567890', true, 0, 'Service Test', '12345678901', 'A company name', 1, 'LOCAL', 'source email', '00000000000000000000000000', 'source name', 'source surname', 0) on conflict ("id") do update set "authorizedCIDRS" = excluded."authorizedCIDRS", "departmentName" = excluded."departmentName", "description" = excluded."description", "isVisible" = excluded."isVisible", "maxAllowedPaymentAmount" = excluded."maxAllowedPaymentAmount", "name" = excluded."name", "organizationFiscalCode" = excluded."organizationFiscalCode", "organizationName" = excluded."organizationName", "quality" = excluded."quality", "scope" = excluded."scope", "serviceMetadata" = excluded."serviceMetadata", "subscriptionAccountEmail" = excluded."subscriptionAccountEmail", "subscriptionAccountId" = excluded."subscriptionAccountId", "subscriptionAccountName" = excluded."subscriptionAccountName", "subscriptionAccountSurname" = excluded."subscriptionAccountSurname", "version" = excluded."version" where "Export"."version" <= excluded."version"`;
 
-    const sql = createUpsertSql(config)(data);
+    const sql = createUpsertSql(config)(retrievedService);
     expect(sql.trim()).toBe(expected.trim());
   });
 });
 
 describe("mapDataToTableRow", () => {
   it("should create a valid data structure", () => {
-    const res = mapDataToTableRow(mockRetrieveDocument, {
+    const res = mapDataToTableRow(mockRetrieveDocument, 0, {
       apimUser: mockApimDelegateUserReponse,
       apimSubscription: mockApimSubscriptionResponse
     });
-
-    expect(res).toMatchObject(mockMigrationRowDataTable);
+    expect(res).toMatchObject(mockServiceRowDataTable);
   });
 });
 
