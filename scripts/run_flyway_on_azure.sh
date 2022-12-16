@@ -85,7 +85,7 @@ if [[ $WORKDIR == /cygdrive/* ]]; then
 fi
 
 export DB_URL="jdbc:postgresql://${psql_server_private_fqdn}:5432/${DB_NAME}?sslmode=require"
-export FLYWAY_USER="${administrator_login}@${psql_server_name}"
+export FLYWAY_USER="${administrator_login}"
 export FLYWAY_PASSWORD="${administrator_login_password}"
 export FLYWAY_DOCKER_TAG="7.11.1-alpine@sha256:88e1b077dd10fd115184383340cd02fe99f30a4def08d1505c1a4db3c97c5278"
 export FLYWAY_SQL_DIR="$(pwd)/${SQL_MIGRATIONS_DIR}/${DB_NAME}"
