@@ -54,7 +54,8 @@ export const Info = (): express.RequestHandler => {
   const handler = InfoHandler(
     healthcheck.checkApplicationHealth(IConfig, [
       c => healthcheck.checkAzureCosmosDbHealth(c.COSMOSDB_URI, c.COSMOSDB_KEY),
-      c => healthcheck.checkAzureStorageHealth(c.AzureWebJobsStorage)
+      c => healthcheck.checkAzureStorageHealth(c.AzureWebJobsStorage),
+      c => healthcheck.checkAzureStorageHealth(c.AssetsStorageConnection)
     ])
   );
 
