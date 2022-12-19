@@ -10,7 +10,7 @@ To-Do:
   2. Pass Insight Application for troubleshooting
 */
 const index: AzureFunction = UpdateServicesWebview(
-  config.SERVICEID_EXCLUSION_LIST
+  config.SERVICE_QUALITY_EXCLUSION_LIST
 );
 
 export default index;

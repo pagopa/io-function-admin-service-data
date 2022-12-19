@@ -84,7 +84,10 @@ export const IConfig = t.intersection([
     COSMOSDB_KEY: NonEmptyString,
     COSMOSDB_NAME: NonEmptyString,
     COSMOSDB_URI: NonEmptyString,
-    SERVICEID_EXCLUSION_LIST: withDefault(
+    // List of service for which we assume quality=1
+    // Overrides the quality calculation
+    // To be used as a workaround for specific services
+    SERVICE_QUALITY_EXCLUSION_LIST: withDefault(
       CommaSeparatedListOf(NonEmptyString),
       []
     ),
