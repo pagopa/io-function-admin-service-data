@@ -6,13 +6,18 @@ import * as t from "io-ts";
 import * as TE from "fp-ts/TaskEither";
 import { Pool, PoolClient } from "pg";
 import * as Cursor from "pg-cursor";
+import knexBase from "knex";
 import { withDefault } from "@pagopa/ts-commons/lib/types";
 import {
   NonEmptyString,
   OrganizationFiscalCode
 } from "@pagopa/ts-commons/lib/strings";
-import { IConfig } from "../utils/config";
+import { IConfig, IDecodableConfigPostgreSQL } from "../utils/config";
 import { initTelemetryClient } from "../utils/appinsight";
+
+const knex = knexBase({
+  client: "pg"
+});
 
 export const ServiceRecord = t.intersection([
   t.interface({
@@ -30,7 +35,8 @@ export const ServiceRecord = t.intersection([
 export type ServiceRecord = t.TypeOf<typeof ServiceRecord>;
 type Services = ReadonlyMap<
   ServiceRecord["organizationFiscalCode"],
-  ReadonlyArray<ServiceRecord>
+  // eslint-disable-next-line functional/prefer-readonly-type -- Service record is used as acumulator
+  ServiceRecord[]
 >;
 
 interface ICompactService {
@@ -43,7 +49,7 @@ interface ICompactService {
   // 1. quality level reached
   readonly q: number;
 }
-type CompactServices = ReadonlyArray<Organization<ICompactService>>;
+type CompactServices = ReadonlyArray<IOrganization<ICompactService>>;
 
 interface IExtendedService extends ICompactService {
   // Service scope
@@ -62,8 +68,25 @@ interface IOrganization<T extends ICompactService> {
   readonly s: ReadonlyArray<T>;
 }
 
-const createSQL = (): string =>
-  `SELECT id, name, quality, scope, description, organizationFiscalCode, organizationName FROM <table> WHERE isVisible is true`;
+// const createSQL = ({DB_SCHEMA, DB_TABLE}: IDecodableConfigPostgreSQL): string => `SELECT id, name, quality, scope, description, organizationFiscalCode, organizationName FROM  WHERE isVisible is true`;
+const createSQL = ({
+  DB_SCHEMA,
+  DB_TABLE
+}: IDecodableConfigPostgreSQL): string =>
+  knex
+    .withSchema(DB_SCHEMA)
+    .table(DB_TABLE)
+    .select([
+      "id",
+      "name",
+      "quality",
+      "scope",
+      "description",
+      "organizationFiscalCode",
+      "organizationName"
+    ])
+    .where(knex.raw(`"isVisible" is true`))
+    .toQuery();
 const createCursor = (pgClient: PoolClient) => (sql: string): Cursor =>
   pgClient.query(new Cursor(sql));
 
@@ -94,14 +117,13 @@ const writeExtended = (context: Context) => (obj: Services): void => {
 };
 
 export const UpdateServicesWebview = (
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  { SERVICE_QUALITY_EXCLUSION_LIST }: IConfig,
+  config: IConfig,
   pool: Pool,
   _telemetryClient: ReturnType<typeof initTelemetryClient>
 ) => async (context: Context): Promise<void> => {
   const client = await pool.connect();
   const procedure = pipe(
-    createSQL(),
+    createSQL(config),
     createCursor(client),
     fetchAllData,
     TE.map(services => {
