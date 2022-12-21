@@ -4,6 +4,8 @@ import { ServiceScope } from "@pagopa/io-functions-commons/dist/generated/defini
 import { pipe } from "fp-ts/lib/function";
 import * as t from "io-ts";
 import * as TE from "fp-ts/TaskEither";
+import * as O from "fp-ts/Option";
+import * as E from "fp-ts/Either";
 import { Pool, PoolClient } from "pg";
 import * as Cursor from "pg-cursor";
 import knexBase from "knex";
@@ -12,6 +14,7 @@ import {
   NonEmptyString,
   OrganizationFiscalCode
 } from "@pagopa/ts-commons/lib/strings";
+import { toError } from "fp-ts/lib/Either";
 import { IConfig, IDecodableConfigPostgreSQL } from "../utils/config";
 import { initTelemetryClient } from "../utils/appinsight";
 
@@ -33,9 +36,10 @@ export const ServiceRecord = t.intersection([
   })
 ]);
 export type ServiceRecord = t.TypeOf<typeof ServiceRecord>;
-type Services = ReadonlyMap<
+// eslint-disable-next-line functional/prefer-readonly-type -- This map is used as accumulator
+type Services = Map<
   ServiceRecord["organizationFiscalCode"],
-  // eslint-disable-next-line functional/prefer-readonly-type -- Service record is used as acumulator
+  // eslint-disable-next-line functional/prefer-readonly-type -- Service record is used as accumulator
   ServiceRecord[]
 >;
 
@@ -90,10 +94,6 @@ const createSQL = ({
 const createCursor = (pgClient: PoolClient) => (sql: string): Cursor =>
   pgClient.query(new Cursor(sql));
 
-const fetchAllData = (cursor: Cursor): TE.TaskEither<Error, Services> => {
-  throw "not implemented yet";
-};
-
 const formatCompactServices = (services: Services): CompactServices => {
   throw "not implemented yet";
 };
@@ -115,6 +115,61 @@ const writeExtended = (context: Context) => (obj: Services): void => {
     context.bindings.visibleServicesExtended = serialized;
   });
 };
+
+const appendService = (
+  services: Services,
+  serviceRecord: ServiceRecord
+): Services =>
+  pipe(
+    services.get(serviceRecord.organizationFiscalCode),
+    O.fromNullable,
+    O.fold(
+      () => {
+        services.set(serviceRecord.organizationFiscalCode, [serviceRecord]);
+      },
+      s => {
+        // eslint-disable-next-line functional/immutable-data
+        s.push(serviceRecord);
+      }
+    ),
+    _ => services
+  );
+
+const binaryOperator = (
+  accumulator: Services,
+  currentValue: unknown
+): Services =>
+  pipe(
+    currentValue,
+    ServiceRecord.decode,
+    x => x,
+    E.fold(
+      error => {
+        // eslint-disable-next-line no-console
+        console.log(toError(error));
+        return accumulator;
+      },
+      serviceRecord => appendService(accumulator, serviceRecord)
+    )
+  );
+
+export const fetchAllData = (cursor: Cursor): TE.TaskEither<Error, Services> =>
+  TE.tryCatch(async () => {
+    const services = new Map() as Services;
+    const pageSize = 100;
+    // eslint-disable-next-line functional/no-let
+    let length: number = pageSize;
+    while (length === pageSize) {
+      try {
+        const rows = await cursor.read(pageSize);
+        length = rows.length;
+        rows.reduce(binaryOperator, services);
+      } catch (ex) {
+        throw toError(ex);
+      }
+    }
+    return services;
+  }, toError);
 
 export const UpdateServicesWebview = (
   config: IConfig,
