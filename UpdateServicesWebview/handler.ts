@@ -17,6 +17,7 @@ import {
 import { toError } from "fp-ts/lib/Either";
 import { IConfig, IDecodableConfigPostgreSQL } from "../utils/config";
 import { initTelemetryClient } from "../utils/appinsight";
+import { readableReport } from "@pagopa/ts-commons/lib/reporters";
 
 const knex = knexBase({
   client: "pg"
@@ -178,7 +179,7 @@ const binaryOperator = (
     E.fold(
       error => {
         // eslint-disable-next-line no-console
-        console.log(toError(error));
+        console.log(readableReport(error));
         return accumulator;
       },
       serviceRecord => appendService(accumulator, serviceRecord)
