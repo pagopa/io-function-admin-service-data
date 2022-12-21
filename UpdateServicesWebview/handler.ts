@@ -53,7 +53,8 @@ interface ICompactService {
   // 1. quality level reached
   readonly q: number;
 }
-type CompactServices = ReadonlyArray<IOrganization<ICompactService>>;
+// eslint-disable-next-line functional/prefer-readonly-type -- This array is used as accumulator
+type CompactServices = Array<IOrganization<ICompactService>>;
 
 interface IExtendedService extends ICompactService {
   // Service scope
@@ -61,7 +62,8 @@ interface IExtendedService extends ICompactService {
   // Service description
   readonly d?: string;
 }
-type ExtendedServices = ReadonlyArray<IOrganization<IExtendedService>>;
+// eslint-disable-next-line functional/prefer-readonly-type -- This array is used as accumulator
+type ExtendedServices = Array<IOrganization<IExtendedService>>;
 
 interface IOrganization<T extends ICompactService> {
   // Organization Fiscal Code
@@ -72,7 +74,6 @@ interface IOrganization<T extends ICompactService> {
   readonly s: ReadonlyArray<T>;
 }
 
-// const createSQL = ({DB_SCHEMA, DB_TABLE}: IDecodableConfigPostgreSQL): string => `SELECT id, name, quality, scope, description, organizationFiscalCode, organizationName FROM  WHERE isVisible is true`;
 const createSQL = ({
   DB_SCHEMA,
   DB_TABLE
@@ -91,15 +92,46 @@ const createSQL = ({
     ])
     .where(knex.raw(`"isVisible" is true`))
     .toQuery();
+
 const createCursor = (pgClient: PoolClient) => (sql: string): Cursor =>
   pgClient.query(new Cursor(sql));
 
 const formatCompactServices = (services: Services): CompactServices => {
-  throw "not implemented yet";
+  const compactServices: CompactServices = [];
+  services.forEach((serviceRecords, organizationFiscalCode) => {
+    // eslint-disable-next-line functional/immutable-data
+    compactServices.push({
+      fc: organizationFiscalCode,
+      o: serviceRecords[0].organizationName,
+      s: serviceRecords.map(serviceRecord => ({
+        i: serviceRecord.id,
+        n: serviceRecord.name,
+        q: serviceRecord.quality
+      }))
+    });
+  });
+
+  return compactServices;
 };
 
 const formatExtendedServices = (services: Services): ExtendedServices => {
-  throw "not implemented yet";
+  const extendedServices: ExtendedServices = [];
+  services.forEach((serviceRecords, organizationFiscalCode) => {
+    // eslint-disable-next-line functional/immutable-data
+    extendedServices.push({
+      fc: organizationFiscalCode,
+      o: serviceRecords[0].organizationName,
+      s: serviceRecords.map(serviceRecord => ({
+        d: serviceRecord.description,
+        i: serviceRecord.id,
+        n: serviceRecord.name,
+        q: serviceRecord.quality,
+        sc: serviceRecord.scope
+      }))
+    });
+  });
+
+  return extendedServices;
 };
 
 const writeCompact = (context: Context) => (obj: Services): void => {
