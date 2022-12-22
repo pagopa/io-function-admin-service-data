@@ -50,6 +50,7 @@ export const IDecodableConfigAPIM = t.interface({
 // Environment configuration to connect to Azure Storage Account
 export type IDecodableConfigStorage = t.TypeOf<typeof IDecodableConfigStorage>;
 export const IDecodableConfigStorage = t.interface({
+  AssetsStorageConnection: NonEmptyString,
   VISIBLE_SERVICES_COMPACT_STORAGE_PATH: NonEmptyString,
   VISIBLE_SERVICES_EXTENDED_STORAGE_PATH: NonEmptyString
 });
