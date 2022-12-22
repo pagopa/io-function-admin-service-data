@@ -12,11 +12,6 @@ const pool = getPool(config);
 // Setup Appinsight
 const telemetryClient = initTelemetryClient(config);
 
-/*
-To-Do:
-  1. Pass PostgreSQL connection pool
-  2. Pass Insight Application for troubleshooting
-*/
 const index: AzureFunction = UpdateServicesWebview({
   config,
   pool,
