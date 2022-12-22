@@ -92,6 +92,7 @@ const createSQL = ({
       "organizationName"
     ])
     .where(knex.raw(`"isVisible" is true`))
+    .orderBy("updateAt", "asc")
     .toQuery();
 
 const createCursor = (pgClient: PoolClient) => (sql: string): Cursor =>
