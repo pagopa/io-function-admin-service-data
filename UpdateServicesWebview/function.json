@@ -1,0 +1,26 @@
+{
+  "disabled": false,
+  "bindings": [
+    {
+        "schedule": "0 0 20 * * *",
+        "name": "updateWebviewServicesCacheTimer",
+        "type": "timerTrigger",
+        "direction": "in"
+    },
+    {
+      "name": "visibleServicesCompact",
+      "type": "blob",
+      "path": "%VISIBLE-SERVICES-COMPACT-STORAGE-PATH%",
+      "connection": "AssetsStorageConnection",
+      "direction": "out"
+    },
+    {
+      "name": "visibleServicesExtended",
+      "type": "blob",
+      "path": "%VISIBLE_SERVICES_EXTENDED_STORAGE_PATH%",
+      "connection": "AssetsStorageConnection",
+      "direction": "out"
+    }
+  ],
+  "scriptFile": "../dist/UpdateServicesWebview/index.js"
+}
