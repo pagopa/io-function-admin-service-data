@@ -125,7 +125,7 @@ const formatExtendedServices = (services: Services): ExtendedServices => {
       o: serviceRecords[0].organizationName,
       s: serviceRecords.map(serviceRecord => ({
         d: serviceRecord.description,
-        i: serviceRecord.id,
+        i: serviceRecord.id.trim(),
         n: serviceRecord.name,
         q: serviceRecord.quality,
         sc: serviceRecord.scope
