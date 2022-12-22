@@ -44,11 +44,15 @@ beforeEach(() => {
 });
 
 describe("UpdateServicesWebview", () => {
+  // mocks
+  const config = mockConfig;
+  const pool = mockPool;
+  const telemetryClient = {} as any;
   it("should throw if the query fails", async () => {
     mockCursorRead.mockImplementationOnce(() => {
       throw new Error();
     });
-    const handler = UpdateServicesWebview(mockConfig, mockPool, {} as any);
+    const handler = UpdateServicesWebview({ config, pool, telemetryClient });
     const context = createMockContext();
     const result = handler(context);
 
@@ -59,7 +63,7 @@ describe("UpdateServicesWebview", () => {
     mockCursorRead.mockImplementationOnce(
       async () => [] /* empty record set */
     );
-    const handler = UpdateServicesWebview(mockConfig, mockPool, {} as any);
+    const handler = UpdateServicesWebview({ config, pool, telemetryClient });
     const context = createMockContext();
     const result = await handler(context);
 
@@ -73,7 +77,7 @@ describe("UpdateServicesWebview", () => {
 
   it("should ignore invalid service record", async () => {
     mockCursorRead.mockImplementationOnce(async () => [anInvalidServiceRecord]);
-    const handler = UpdateServicesWebview(mockConfig, mockPool, {} as any);
+    const handler = UpdateServicesWebview({ config, pool, telemetryClient });
     const context = createMockContext();
     const result = await handler(context);
 
@@ -89,7 +93,7 @@ describe("UpdateServicesWebview", () => {
       anInvalidServiceRecord,
       aServiceRecord
     ]);
-    const handler = UpdateServicesWebview(mockConfig, mockPool, {} as any);
+    const handler = UpdateServicesWebview({ config, pool, telemetryClient });
     const context = createMockContext();
     const result = await handler(context);
 
@@ -129,5 +133,91 @@ describe("UpdateServicesWebview", () => {
     expect(context.bindings.visibleServicesExtended).toBe(
       JSON.stringify([expectedExtended])
     );
+  });
+  it("should iterate cursor", async () => {
+    mockCursorRead.mockImplementationOnce(async () => [
+      aServiceRecord,
+      aServiceRecord
+    ]);
+    mockCursorRead.mockImplementationOnce(async () => [aServiceRecord]);
+    const handler = UpdateServicesWebview({
+      config,
+      pool,
+      telemetryClient,
+      pageSize: 2
+    });
+    const context = createMockContext();
+    const result = await handler(context);
+
+    expect(result).toBe(undefined);
+    // just one iteration
+    expect(mockCursorRead).toBeCalledTimes(2);
+    // no data has been written to out bindings
+    expect(context.bindings.visibleServicesCompact).toEqual(expect.any(String));
+    expect(context.bindings.visibleServicesExtended).toEqual(
+      expect.any(String)
+    );
+  });
+  it("should iterate cursor when last page is equals to maxPageSize", async () => {
+    mockCursorRead.mockImplementationOnce(async () => [aServiceRecord]);
+    mockCursorRead.mockImplementationOnce(async () => []);
+    const handler = UpdateServicesWebview({
+      config,
+      pool,
+      telemetryClient,
+      pageSize: 1
+    });
+    const context = createMockContext();
+    const result = await handler(context);
+
+    const parsedCompact = pipe(
+      context.bindings.visibleServicesCompact,
+      JSON.parse
+    );
+
+    const parsedExtended = pipe(
+      context.bindings.visibleServicesExtended,
+      JSON.parse
+    );
+
+    expect(result).toBe(undefined);
+    // just one iteration
+    expect(mockCursorRead).toBeCalledTimes(2);
+    // no data has been written to out bindings
+    expect(parsedCompact.length).toBe(1); // we passed services for the same org
+    expect(parsedExtended.length).toBe(1); // we passed services for the same org
+  });
+  it("should correctly aggregate services by organizationFiscalCode", async () => {
+    mockCursorRead.mockImplementationOnce(async () => [
+      aServiceRecord,
+      aServiceRecord
+    ]);
+    const handler = UpdateServicesWebview({
+      config,
+      pool,
+      telemetryClient,
+      pageSize: 3
+    });
+    const context = createMockContext();
+    const result = await handler(context);
+
+    const parsedCompact = pipe(
+      context.bindings.visibleServicesCompact,
+      JSON.parse
+    );
+
+    const parsedExtended = pipe(
+      context.bindings.visibleServicesExtended,
+      JSON.parse
+    );
+
+    expect(result).toBe(undefined);
+    // just one iteration
+    expect(mockCursorRead).toBeCalledTimes(1);
+    // no data has been written to out bindings
+    expect(parsedCompact.length).toBe(1); // we passed services for the same org
+    expect(parsedCompact[0].s.length).toBe(2); // we passed two services for the same org
+    expect(parsedExtended.length).toBe(1); // we passed services for the same org
+    expect(parsedExtended[0].s.length).toBe(2); // we passed two services for the same org
   });
 });

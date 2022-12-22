@@ -15,9 +15,9 @@ import {
   OrganizationFiscalCode
 } from "@pagopa/ts-commons/lib/strings";
 import { toError } from "fp-ts/lib/Either";
+import { readableReport } from "@pagopa/ts-commons/lib/reporters";
 import { IConfig, IDecodableConfigPostgreSQL } from "../utils/config";
 import { initTelemetryClient } from "../utils/appinsight";
-import { readableReport } from "@pagopa/ts-commons/lib/reporters";
 
 const knex = knexBase({
   client: "pg"
@@ -175,7 +175,6 @@ const binaryOperator = (
   pipe(
     currentValue,
     ServiceRecord.decode,
-    x => x,
     E.fold(
       error => {
         // eslint-disable-next-line no-console
@@ -186,10 +185,11 @@ const binaryOperator = (
     )
   );
 
-export const fetchAllData = (cursor: Cursor): TE.TaskEither<Error, Services> =>
+export const fetchAllData = (pageSize: number) => (
+  cursor: Cursor
+): TE.TaskEither<Error, Services> =>
   TE.tryCatch(async () => {
     const services = new Map() as Services;
-    const pageSize = 100;
     // eslint-disable-next-line functional/no-let
     let length: number = pageSize;
     while (length === pageSize) {
@@ -204,16 +204,22 @@ export const fetchAllData = (cursor: Cursor): TE.TaskEither<Error, Services> =>
     return services;
   }, toError);
 
-export const UpdateServicesWebview = (
-  config: IConfig,
-  pool: Pool,
-  _telemetryClient: ReturnType<typeof initTelemetryClient>
-) => async (context: Context): Promise<void> => {
+interface IHandlerParameters {
+  readonly config: IConfig;
+  readonly pool: Pool;
+  readonly pageSize?: number;
+  readonly telemetryClient: ReturnType<typeof initTelemetryClient>;
+}
+export const UpdateServicesWebview = ({
+  config,
+  pool,
+  pageSize = 1000
+}: IHandlerParameters) => async (context: Context): Promise<void> => {
   const client = await pool.connect();
   const procedure = pipe(
     createSQL(config),
     createCursor(client),
-    fetchAllData,
+    fetchAllData(pageSize),
     TE.map(services => {
       writeCompact(context)(services);
       writeExtended(context)(services);

@@ -17,10 +17,10 @@ To-Do:
   1. Pass PostgreSQL connection pool
   2. Pass Insight Application for troubleshooting
 */
-const index: AzureFunction = UpdateServicesWebview(
+const index: AzureFunction = UpdateServicesWebview({
   config,
   pool,
   telemetryClient
-);
+});
 
 export default index;
