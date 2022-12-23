@@ -2,7 +2,7 @@
   "disabled": false,
   "bindings": [
     {
-        "schedule": "0 0 20 * * *",
+        "schedule": "0 50 7-21 * * *",
         "name": "updateWebviewServicesCacheTimer",
         "type": "timerTrigger",
         "direction": "in"
@@ -10,7 +10,7 @@
     {
       "name": "visibleServicesCompact",
       "type": "blob",
-      "path": "%VISIBLE-SERVICES-COMPACT-STORAGE-PATH%",
+      "path": "%VISIBLE_SERVICES_COMPACT_STORAGE_PATH%",
       "connection": "AssetsStorageConnection",
       "direction": "out"
     },
