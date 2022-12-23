@@ -192,8 +192,8 @@ export const fetchAllData = (pageSize: number) => (
   TE.tryCatch(async () => {
     const services = new Map() as Services;
     // eslint-disable-next-line functional/no-let
-    let length: number = pageSize;
-    while (length === pageSize) {
+    let length: number;
+    do {
       try {
         const rows = await cursor.read(pageSize);
         length = rows.length;
@@ -201,7 +201,7 @@ export const fetchAllData = (pageSize: number) => (
       } catch (ex) {
         throw toError(ex);
       }
-    }
+    } while (length > 0);
     return services;
   }, toError);
 

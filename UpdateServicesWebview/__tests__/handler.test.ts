@@ -17,7 +17,9 @@ const createMockContext = () =>
     }
   } as unknown) as Context);
 
-const mockCursorRead = jest.fn();
+const mockCursorRead = jest.fn<Promise<Array<any>>, []>(async () => {
+  throw new Error("mockCursorRead not initialized");
+});
 const mockPool = ({
   connect: async () => ({
     query: () => ({
@@ -40,7 +42,8 @@ const aServiceRecord = pipe(
 );
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  jest.resetAllMocks();
+  mockCursorRead.mockImplementation(async () => [] as any[]);
 });
 
 describe("UpdateServicesWebview", () => {
@@ -68,8 +71,6 @@ describe("UpdateServicesWebview", () => {
     const result = await handler(context);
 
     expect(result).toBe(undefined);
-    // just one iteration
-    expect(mockCursorRead).toBeCalledTimes(1);
     // no data has been written to out bindings
     expect(context.bindings.visibleServicesCompact).toBe("[]");
     expect(context.bindings.visibleServicesExtended).toBe("[]");
@@ -82,8 +83,6 @@ describe("UpdateServicesWebview", () => {
     const result = await handler(context);
 
     expect(result).toBe(undefined);
-    // just one iteration
-    expect(mockCursorRead).toBeCalledTimes(1);
     // no data has been written to out bindings
     expect(context.bindings.visibleServicesCompact).toBe("[]");
     expect(context.bindings.visibleServicesExtended).toBe("[]");
@@ -124,8 +123,6 @@ describe("UpdateServicesWebview", () => {
     };
 
     expect(result).toBe(undefined);
-    // just one iteration
-    expect(mockCursorRead).toBeCalledTimes(1);
     // no data has been written to out bindings
     expect(context.bindings.visibleServicesCompact).toBe(
       JSON.stringify([expectedCompact])
@@ -150,43 +147,15 @@ describe("UpdateServicesWebview", () => {
     const result = await handler(context);
 
     expect(result).toBe(undefined);
-    // just one iteration
-    expect(mockCursorRead).toBeCalledTimes(2);
+    // a new query will always be executed if there are at least one result from previously one
+    expect(mockCursorRead).toBeCalledTimes(3);
     // no data has been written to out bindings
     expect(context.bindings.visibleServicesCompact).toEqual(expect.any(String));
     expect(context.bindings.visibleServicesExtended).toEqual(
       expect.any(String)
     );
   });
-  it("should iterate cursor when last page is equals to maxPageSize", async () => {
-    mockCursorRead.mockImplementationOnce(async () => [aServiceRecord]);
-    mockCursorRead.mockImplementationOnce(async () => []);
-    const handler = UpdateServicesWebview({
-      config,
-      pool,
-      telemetryClient,
-      pageSize: 1
-    });
-    const context = createMockContext();
-    const result = await handler(context);
 
-    const parsedCompact = pipe(
-      context.bindings.visibleServicesCompact,
-      JSON.parse
-    );
-
-    const parsedExtended = pipe(
-      context.bindings.visibleServicesExtended,
-      JSON.parse
-    );
-
-    expect(result).toBe(undefined);
-    // just one iteration
-    expect(mockCursorRead).toBeCalledTimes(2);
-    // no data has been written to out bindings
-    expect(parsedCompact.length).toBe(1); // we passed services for the same org
-    expect(parsedExtended.length).toBe(1); // we passed services for the same org
-  });
   it("should correctly aggregate services by organizationFiscalCode", async () => {
     mockCursorRead.mockImplementationOnce(async () => [
       aServiceRecord,
@@ -212,8 +181,6 @@ describe("UpdateServicesWebview", () => {
     );
 
     expect(result).toBe(undefined);
-    // just one iteration
-    expect(mockCursorRead).toBeCalledTimes(1);
     // no data has been written to out bindings
     expect(parsedCompact.length).toBe(1); // we passed services for the same org
     expect(parsedCompact[0].s.length).toBe(2); // we passed two services for the same org
@@ -244,8 +211,6 @@ describe("UpdateServicesWebview", () => {
     );
 
     expect(result).toBe(undefined);
-    // just one iteration
-    expect(mockCursorRead).toBeCalledTimes(1);
     // no data has been written to out bindings
     expect(parsedCompact.length).toBe(1);
     expect(parsedCompact[0].s.length).toBe(1);
