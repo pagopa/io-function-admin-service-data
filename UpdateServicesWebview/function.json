@@ -2,7 +2,7 @@
   "disabled": false,
   "bindings": [
     {
-        "schedule": "0 0 20 * * *",
+        "schedule": "0 50 7-21 * * *",
         "name": "updateWebviewServicesCacheTimer",
         "type": "timerTrigger",
         "direction": "in"
