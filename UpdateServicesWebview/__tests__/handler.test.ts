@@ -220,4 +220,38 @@ describe("UpdateServicesWebview", () => {
     expect(parsedExtended.length).toBe(1); // we passed services for the same org
     expect(parsedExtended[0].s.length).toBe(2); // we passed two services for the same org
   });
+  it("should trim service id", async () => {
+    mockCursorRead.mockImplementationOnce(async () => [
+      { ...aServiceRecord, id: `  ${aServiceRecord.id}  ` }
+    ]);
+    const handler = UpdateServicesWebview({
+      config,
+      pool,
+      telemetryClient,
+      pageSize: 2
+    });
+    const context = createMockContext();
+    const result = await handler(context);
+
+    const parsedCompact = pipe(
+      context.bindings.visibleServicesCompact,
+      JSON.parse
+    );
+
+    const parsedExtended = pipe(
+      context.bindings.visibleServicesExtended,
+      JSON.parse
+    );
+
+    expect(result).toBe(undefined);
+    // just one iteration
+    expect(mockCursorRead).toBeCalledTimes(1);
+    // no data has been written to out bindings
+    expect(parsedCompact.length).toBe(1);
+    expect(parsedCompact[0].s.length).toBe(1);
+    expect(parsedCompact[0].s[0].i).toBe("foo");
+    expect(parsedExtended.length).toBe(1);
+    expect(parsedExtended[0].s.length).toBe(1);
+    expect(parsedExtended[0].s[0].i).toBe("foo");
+  });
 });
