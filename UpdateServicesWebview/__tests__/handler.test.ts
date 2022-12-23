@@ -1,7 +1,12 @@
 import { Context } from "@azure/functions";
 import { Pool } from "pg";
 import { IConfig } from "../../utils/config";
-import { UpdateServicesWebview, ServiceRecord } from "../handler";
+import {
+  UpdateServicesWebview,
+  ServiceRecord,
+  CompactServices,
+  ExtendedServices
+} from "../handler";
 import * as E from "fp-ts/Either";
 import { pipe } from "fp-ts/lib/function";
 
@@ -48,7 +53,7 @@ beforeEach(() => {
 
 describe("UpdateServicesWebview", () => {
   // mocks
-  const config = mockConfig;
+  const config = { ...mockConfig, SERVICE_QUALITY_EXCLUSION_LIST: [] };
   const pool = mockPool;
   const telemetryClient = {} as any;
   it("should throw if the query fails", async () => {
@@ -218,5 +223,63 @@ describe("UpdateServicesWebview", () => {
     expect(parsedExtended.length).toBe(1);
     expect(parsedExtended[0].s.length).toBe(1);
     expect(parsedExtended[0].s[0].i).toBe("foo");
+  });
+  it("should set quality based on SERVICE_QUALITY_EXCLUSION_LIST config", async () => {
+    const aServiceRecordNotInExclusionList = {
+      ...aServiceRecord,
+      id: "included",
+      quality: 0
+    };
+    const aServiceRecordInExclusionList = {
+      ...aServiceRecord,
+      id: "excluded",
+      quality: 0
+    };
+    mockCursorRead.mockImplementationOnce(async () => [
+      aServiceRecordNotInExclusionList,
+      aServiceRecordInExclusionList
+    ]);
+    const handler = UpdateServicesWebview({
+      config: {
+        ...config,
+        SERVICE_QUALITY_EXCLUSION_LIST: [aServiceRecordInExclusionList.id]
+      },
+      pool,
+      telemetryClient
+    });
+    const context = createMockContext();
+    const result = await handler(context);
+
+    const parsedCompact: CompactServices = pipe(
+      context.bindings.visibleServicesCompact,
+      JSON.parse
+    );
+
+    const parsedExtended: ExtendedServices = pipe(
+      context.bindings.visibleServicesExtended,
+      JSON.parse
+    );
+
+    expect(result).toBe(undefined);
+    expect(
+      parsedCompact[0].s.find(
+        item => item.i === aServiceRecordNotInExclusionList.id
+      )?.q
+    ).toBe(aServiceRecordNotInExclusionList.quality);
+    expect(
+      parsedCompact[0].s.find(
+        item => item.i === aServiceRecordInExclusionList.id
+      )?.q
+    ).toBe(1);
+    expect(
+      parsedExtended[0].s.find(
+        item => item.i === aServiceRecordNotInExclusionList.id
+      )?.q
+    ).toBe(aServiceRecordNotInExclusionList.quality);
+    expect(
+      parsedExtended[0].s.find(
+        item => item.i === aServiceRecordInExclusionList.id
+      )?.q
+    ).toBe(1);
   });
 });

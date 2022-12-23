@@ -55,7 +55,7 @@ interface ICompactService {
   readonly q: number;
 }
 // eslint-disable-next-line functional/prefer-readonly-type -- This array is used as accumulator
-type CompactServices = Array<IOrganization<ICompactService>>;
+export type CompactServices = Array<IOrganization<ICompactService>>;
 
 interface IExtendedService extends ICompactService {
   // Service scope
@@ -64,7 +64,7 @@ interface IExtendedService extends ICompactService {
   readonly d?: string;
 }
 // eslint-disable-next-line functional/prefer-readonly-type -- This array is used as accumulator
-type ExtendedServices = Array<IOrganization<IExtendedService>>;
+export type ExtendedServices = Array<IOrganization<IExtendedService>>;
 
 interface IOrganization<T extends ICompactService> {
   // Organization Fiscal Code
@@ -98,7 +98,9 @@ const createSQL = ({
 const createCursor = (pgClient: PoolClient) => (sql: string): Cursor =>
   pgClient.query(new Cursor(sql));
 
-const formatCompactServices = (services: Services): CompactServices => {
+const formatCompactServices = (
+  serviceQualityExclusionList: ReadonlyArray<string>
+) => (services: Services): CompactServices => {
   const compactServices: CompactServices = [];
   services.forEach((serviceRecords, organizationFiscalCode) => {
     // eslint-disable-next-line functional/immutable-data
@@ -106,9 +108,11 @@ const formatCompactServices = (services: Services): CompactServices => {
       fc: organizationFiscalCode,
       o: serviceRecords[0].organizationName,
       s: serviceRecords.map(serviceRecord => ({
-        i: serviceRecord.id.trim(),
+        i: serviceRecord.id,
         n: serviceRecord.name,
-        q: serviceRecord.quality
+        q: serviceQualityExclusionList.includes(serviceRecord.id)
+          ? 1
+          : serviceRecord.quality
       }))
     });
   });
@@ -116,7 +120,9 @@ const formatCompactServices = (services: Services): CompactServices => {
   return compactServices;
 };
 
-const formatExtendedServices = (services: Services): ExtendedServices => {
+const formatExtendedServices = (
+  serviceQualityExclusionList: ReadonlyArray<string>
+) => (services: Services): ExtendedServices => {
   const extendedServices: ExtendedServices = [];
   services.forEach((serviceRecords, organizationFiscalCode) => {
     // eslint-disable-next-line functional/immutable-data
@@ -125,9 +131,11 @@ const formatExtendedServices = (services: Services): ExtendedServices => {
       o: serviceRecords[0].organizationName,
       s: serviceRecords.map(serviceRecord => ({
         d: serviceRecord.description,
-        i: serviceRecord.id.trim(),
+        i: serviceRecord.id,
         n: serviceRecord.name,
-        q: serviceRecord.quality,
+        q: serviceQualityExclusionList.includes(serviceRecord.id)
+          ? 1
+          : serviceRecord.quality,
         sc: serviceRecord.scope
       }))
     });
@@ -136,18 +144,34 @@ const formatExtendedServices = (services: Services): ExtendedServices => {
   return extendedServices;
 };
 
-const writeCompact = (context: Context) => (obj: Services): void => {
-  pipe(obj, formatCompactServices, JSON.stringify, serialized => {
-    // eslint-disable-next-line functional/immutable-data
-    context.bindings.visibleServicesCompact = serialized;
-  });
+const writeCompact = (
+  context: Context,
+  serviceQualityExclusionList: ReadonlyArray<string>
+) => (obj: Services): void => {
+  pipe(
+    obj,
+    formatCompactServices(serviceQualityExclusionList),
+    JSON.stringify,
+    serialized => {
+      // eslint-disable-next-line functional/immutable-data
+      context.bindings.visibleServicesCompact = serialized;
+    }
+  );
 };
 
-const writeExtended = (context: Context) => (obj: Services): void => {
-  pipe(obj, formatExtendedServices, JSON.stringify, serialized => {
-    // eslint-disable-next-line functional/immutable-data
-    context.bindings.visibleServicesExtended = serialized;
-  });
+const writeExtended = (
+  context: Context,
+  serviceQualityExclusionList: ReadonlyArray<string>
+) => (obj: Services): void => {
+  pipe(
+    obj,
+    formatExtendedServices(serviceQualityExclusionList),
+    JSON.stringify,
+    serialized => {
+      // eslint-disable-next-line functional/immutable-data
+      context.bindings.visibleServicesExtended = serialized;
+    }
+  );
 };
 
 const appendService = (
@@ -176,6 +200,10 @@ const binaryOperator = (
   pipe(
     currentValue,
     ServiceRecord.decode,
+    E.map(({ id, ...serviceRecord }) => ({
+      ...serviceRecord,
+      id: id.trim() as NonEmptyString
+    })),
     E.fold(
       error => {
         // eslint-disable-next-line no-console
@@ -222,8 +250,8 @@ export const UpdateServicesWebview = ({
     createCursor(client),
     fetchAllData(pageSize),
     TE.map(services => {
-      writeCompact(context)(services);
-      writeExtended(context)(services);
+      writeCompact(context, config.SERVICE_QUALITY_EXCLUSION_LIST)(services);
+      writeExtended(context, config.SERVICE_QUALITY_EXCLUSION_LIST)(services);
     }),
     TE.getOrElse(error => {
       throw error;
