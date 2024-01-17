@@ -17,7 +17,14 @@ const isOrganizationUser = (u: RawApimUserResponse): boolean =>
       () => u.note !== undefined,
       () => E.toError
     ),
-    E.map(() => pipe(u.note.trim(), OrganizationFiscalCode.decode, E.isRight)),
+    E.map(() =>
+      pipe(
+        u.note.trim(),
+        OrganizationFiscalCode.decode,
+        E.orElse(() => pipe(u.firstName.trim(), OrganizationFiscalCode.decode)),
+        E.isRight
+      )
+    ),
     E.mapLeft(() => false),
     E.fold(() => false, identity)
   );
