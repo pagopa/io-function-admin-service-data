@@ -4,7 +4,10 @@ import * as O from "fp-ts/lib/Option";
 import * as TE from "fp-ts/lib/TaskEither";
 import * as RA from "fp-ts/lib/ReadonlyArray";
 import knex from "knex";
-import { NonEmptyString } from "@pagopa/ts-commons/lib/strings";
+import {
+  NonEmptyString,
+  OrganizationFiscalCode
+} from "@pagopa/ts-commons/lib/strings";
 import {
   RetrievedService,
   ValidService
@@ -15,6 +18,7 @@ import { Context } from "@azure/functions";
 import { ServiceRowDataTable } from "../models/Domain";
 import { IConfig, IDecodableConfigPostgreSQL } from "../utils/config";
 import {
+  ApimOrganizationUserResponse,
   ApimSubscriptionResponse,
   ApimUserResponse,
   IApimConfig
@@ -160,7 +164,11 @@ export const mapDataToTableRow = (
   serviceMetadata: retrievedDocument.serviceMetadata,
   subscriptionAccountEmail: apimData.apimUser.email,
   subscriptionAccountId: apimData.apimSubscription.ownerId,
-  subscriptionAccountName: apimData.apimUser.firstName,
+  subscriptionAccountName: ApimOrganizationUserResponse.is(apimData.apimUser)
+    ? OrganizationFiscalCode.is(apimData.apimUser.note)
+      ? apimData.apimUser.firstName
+      : (apimData.apimUser.note as NonEmptyString)
+    : apimData.apimUser.firstName,
   subscriptionAccountSurname: apimData.apimUser.lastName,
   version: retrievedDocument.version
 });
