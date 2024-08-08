@@ -84,6 +84,7 @@ jobs:
             !local.settings.json
             !test
             !tsconfig.json
+            !infra/**/*
         with:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
           script: |-
