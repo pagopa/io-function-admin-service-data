@@ -107,9 +107,6 @@ jobs:
               await io.cp(file, dest, options)
             }
 
-      - name: TEST
-        run: ls -la ./${{ env.BUNDLE_NAME }}   
-
       - name: Make Zip File
         run: zip -r ${{ github.workspace }}/${{ env.BUNDLE_NAME }}.zip ${{ github.workspace }}/${{ env.BUNDLE_NAME }}
 
@@ -139,9 +136,6 @@ jobs:
         with:
           name: ${{ env.BUNDLE_NAME }}
       
-      - name: TEST
-        run: ls -la .
-      
       - name: Azure Login
         uses: azure/login@v2 # v2.0.0
         env:
@@ -151,49 +145,43 @@ jobs:
           tenant-id: ${{ secrets.ARM_TENANT_ID }}
           subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
 
-      - name: Deploy TEST
+      - name: Deploy
+        if: ${{ inputs.use_staging_slot == false }}
         run: |
-          az webapp up \
-            --dryrun \
+          az webapp deploy \
             --resource-group ${{ inputs.resource_group_name }} \
             --name ${{ inputs.app_name }} \
+            --src-path  ${{ github.workspace }}/${{ env.BUNDLE_NAME }}.zip \
+            --type zip \
+            --async false
 
-      # - name: Deploy
-      #   if: ${{ inputs.use_staging_slot == false }}
-      #   run: |
-      #     az webapp deploy \
-      #       --resource-group ${{ inputs.resource_group_name }} \
-      #       --name ${{ inputs.app_name }} \
-      #       --src-path  ${{ github.workspace }}/${{ env.BUNDLE_NAME }}.zip \
-      #       --type zip \
-      #       --async false
+      - name: Deploy to Staging Slot
+        if: ${{ inputs.use_staging_slot == true }}
+        run: |
+          az webapp deploy \
+            --resource-group ${{ inputs.resource_group_name }} \
+            --name ${{ inputs.app_name }} \
+            --slot staging \
+            --src-path  ${{ github.workspace }}/${{ env.BUNDLE_NAME }}.zip \
+            --type zip \
+            --async false
 
-      # - name: Deploy to Staging Slot
-      #   if: ${{ inputs.use_staging_slot == true }}
-      #   run: |
-      #     az webapp deploy \
-      #       --resource-group ${{ inputs.resource_group_name }} \
-      #       --name ${{ inputs.app_name }} \
-      #       --slot staging \
-      #       --src-path  ${{ github.workspace }}/${{ env.BUNDLE_NAME }}.zip \
-      #       --type zip \
-      #       --async false
+      - name: Swap Staging and Production Slots
+        if: ${{ inputs.use_staging_slot == true }}
+        run: |
+          az webapp deployment slot swap \
+            -g ${{ inputs.resource_group_name }} \
+            -n ${{ inputs.app_name }} \
+            --slot staging \
+            --target-slot production
 
-      # - name: Swap Staging and Production Slots
-      #   if: ${{ inputs.use_staging_slot == true }}
-      #   run: |
-      #     az webapp deployment slot swap \
-      #       -g ${{ inputs.resource_group_name }} \
-      #       -n ${{ inputs.app_name }} \
-      #       --slot staging \
-      #       --target-slot production
-
-      # - name: Migrate DB Schema
-      #   run: |-
-      #     set -e
-      #     # THIS IS THE PRODUCTION SCHEMA NAME, SO PLEASE DON'T CHANGE IT
-      #     SCHEMA_NAME=DeveloperPortalServiceData
-      #     ./scripts/run_flyway_on_azure.sh migrate db PROD-IO schema/migrations "${SCHEMA_NAME}" \
-      #       && echo "Migration successful" \
-      #       || { echo "Migration failed"; exit 1; }
-      #   shell: bash
+      - name: Migrate DB Schema
+        run: |-
+          set -e
+          ./scripts/run_flyway_on_azure.sh migrate db PROD-IO schema/migrations "${{ env.SCHEMA_NAME }}" \
+            && echo "Migration successful" \
+            || { echo "Migration failed"; exit 1; }
+        shell: bash
+        env:
+          # THIS IS THE PRODUCTION SCHEMA NAME, SO PLEASE DON'T CHANGE IT
+          SCHEMA_NAME: DeveloperPortalServiceData
