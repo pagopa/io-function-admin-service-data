@@ -5,33 +5,24 @@ resource "github_repository" "this" {
   #tfsec:ignore:github-repositories-private
   visibility = "public"
 
-  allow_auto_merge            = true
+  allow_auto_merge            = false
   allow_rebase_merge          = true
-  allow_merge_commit          = false
+  allow_merge_commit          = true
   allow_squash_merge          = true
   squash_merge_commit_title   = "COMMIT_OR_PR_TITLE"
   squash_merge_commit_message = "COMMIT_MESSAGES"
 
   delete_branch_on_merge = true
 
-  has_projects    = false
-  has_wiki        = false
+  has_projects    = true
+  has_wiki        = true
   has_discussions = false
-  has_issues      = false
+  has_issues      = true
   has_downloads   = true
 
-  topics = ["digital-citizenship"]
+  topics = []
 
   vulnerability_alerts = true
-
-  pages {
-    build_type = "legacy"
-
-    source {
-      branch = "gh-pages"
-      path   = "/"
-    }
-  }
 
   security_and_analysis {
     secret_scanning {
@@ -41,5 +32,11 @@ resource "github_repository" "this" {
     secret_scanning_push_protection {
       status = "enabled"
     }
+  }
+
+  template {
+    include_all_branches = false
+    owner                = "pagopa"
+    repository           = "io-functions-template"
   }
 }
