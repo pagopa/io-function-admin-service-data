@@ -1,0 +1,81 @@
+name: Code Review
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - "*"
+      - "!infra/*"
+      - "!.github/*"
+
+jobs:
+  js_code_review:
+    runs-on: ubuntu-22.04
+    environment: prod-ci
+
+    steps:
+      - name: Check-out code
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
+        with:
+          node-version-file: ".node-version"
+          cache: "yarn"
+
+      - name: Install dependencies
+        run: yarn install --immutable
+        working-directory: .
+
+      - name: Build
+        run: yarn build
+
+      - name: Lint
+        run: yarn lint
+
+      - name: Generate models
+        run: yarn generate
+
+      - name: Unit tests exec
+        run: yarn test:coverage
+
+      # Codecov provides reports and metrics about test coverage data.
+      # To enable set CODECOV_TOKEN secret at repo level and make sure
+      # that your "code-review" script creates a "coverage/" folder in
+      # the root workspace.
+      - name: Upload coverage report to codecov.io
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        if: ${{ env.CODECOV_TOKEN != '' }}
+        uses: codecov/codecov-action@84508663e988701840491b86de86b666e8a86bed # v4.3.0
+        with:
+          token: ${{ env.CODECOV_TOKEN }}
+
+      - name: Start PostgresSQL instance
+        run: |-
+          docker run --rm -d \
+            -e POSTGRES_DB=db \
+            -e POSTGRES_PASSWORD=${{ env.POSTGRES_PASSWORD }} \
+            -p 5432:5432 \
+            postgres
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+
+      - name: Play migrations
+        run: |-
+          ./scripts/run_flyway_on_server.sh migrate db localhost 5432 postgres mysecretpassword schema/migrations MySchema \
+            && echo "Migration successful" \
+            || { echo "Migration failed"; exit 1; }
+
+      - name: SQL tests exec
+        run: |-
+          DB_HOST=localhost \
+          DB_PORT=5432 \
+          DB_USER=postgres \
+          DB_PASSWORD=${{ env.POSTGRES_PASSWORD }} \
+          DB_SCHEMA=MySchema \
+          DB_NAME=db \
+          yarn test:schema
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}

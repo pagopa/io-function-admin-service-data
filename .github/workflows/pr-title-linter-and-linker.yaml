@@ -1,4 +1,4 @@
-  name: "Lint and Link PR title"
+name: "Lint and Link PR title"
 
 on:
   pull_request:
