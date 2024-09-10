@@ -19,25 +19,19 @@ concurrency:
 
 jobs:
   migrate:
-    runs-on: ${{ inputs.use_private_agent == true && 'self-hosted' || 'ubuntu-22.04' }}
+    runs-on: [self-hosted, ubuntu-22.04] #${{ inputs.use_private_agent == true && 'self-hosted' || 'ubuntu-22.04' }}
     environment: ${{ inputs.environment }}-cd
-    services:
-      docker:
-        image: docker:dind
-        options: --privileged --shm-size=2g
-        volumes:
-          - /var/run/docker.sock:/var/run/docker.sock:ro
 
     steps:
       - name: checkout
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
-      - name: Install Docker
-        run: |
-          apt-get update
-          apt-get install -y docker.io
-          # systemctl start docker
-          # ystemctl enable docker
+      # - name: Install Docker
+      #   run: |
+      #     apt-get update
+      #     apt-get install -y docker.io
+      #     # systemctl start docker
+      #     # ystemctl enable docker
 
       - name: Verify Docker Installation
         run: docker --version
