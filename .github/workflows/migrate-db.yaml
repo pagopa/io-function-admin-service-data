@@ -13,9 +13,6 @@ on:
         required: false
         default: true
 
-env:
-  BUNDLE_NAME: bundle
-
 concurrency:
   group: ${{ github.workflow }}-cd
   cancel-in-progress: true
@@ -27,26 +24,20 @@ jobs:
     permissions:
       id-token: write
       contents: read
-    # services:
-    #   docker:
-    #     image: docker:27.2.1-dind
-    #     options: --privileged
-    container: 
-      image: node:18 
-      env: 
-        NODE_ENV: development 
-      ports: 
-        - 80 
-      volumes: 
-        - my_docker_volume:/volume_mount 
-      options: --cpus 1 
+    services:
+      docker:
+        image: docker:27.2.1-dind
+        options: --privileged
+        ports:
+          - 2375:2375
 
     steps:
       - name: checkout
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
-      - name: Check for dockerenv file 
-        run: (ls /.dockerenv && echo Found dockerenv) || (echo No dockerenv) 
+      - name: Start Docker daemon
+        run: |
+          docker info || { echo 'Docker is not running'; exit 1; }
 
       - name: Migrate DB Schema
         run: |-
