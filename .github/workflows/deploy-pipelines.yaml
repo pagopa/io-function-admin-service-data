@@ -197,30 +197,30 @@ jobs:
             --slot staging \
             --target-slot production
 
-  migrate:
-    needs: [deploy]
-    runs-on: ${{ inputs.use_private_agent == true && 'self-hosted' || 'ubuntu-22.04' }}
-    environment: ${{ inputs.environment }}-cd
-    permissions:
-      id-token: write
-      contents: read
-    services:
-      docker:
-        image: docker:20.10.7-dind
-        options: --privileged
+  # migrate:
+  #   needs: [deploy]
+  #   runs-on: ${{ inputs.use_private_agent == true && 'self-hosted' || 'ubuntu-22.04' }}
+  #   environment: ${{ inputs.environment }}-cd
+  #   permissions:
+  #     id-token: write
+  #     contents: read
+  #   services:
+  #     docker:
+  #       image: docker:20.10.7-dind
+  #       options: --privileged
 
-    steps:
-      - name: checkout
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+  #   steps:
+  #     - name: checkout
+  #       uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
 
-      - name: Migrate DB Schema
-        run: |-
-          set -e
-          ./scripts/run_flyway_on_azure.sh migrate db PROD-IO schema/migrations "${{ env.SCHEMA_NAME }}" \
-            && echo "Migration successful" \
-            || { echo "Migration failed"; exit 1; }
-        shell: bash
-        env:
-          # THIS IS THE PRODUCTION SCHEMA NAME, SO PLEASE DON'T CHANGE IT
-          SCHEMA_NAME: DeveloperPortalServiceData
+  #     - name: Migrate DB Schema
+  #       run: |-
+  #         set -e
+  #         ./scripts/run_flyway_on_azure.sh migrate db PROD-IO schema/migrations "${{ env.SCHEMA_NAME }}" \
+  #           && echo "Migration successful" \
+  #           || { echo "Migration failed"; exit 1; }
+  #       shell: bash
+  #       env:
+  #         # THIS IS THE PRODUCTION SCHEMA NAME, SO PLEASE DON'T CHANGE IT
+  #         SCHEMA_NAME: DeveloperPortalServiceData

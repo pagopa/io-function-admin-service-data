@@ -1,0 +1,60 @@
+name: Migrate DB
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: Environment where the artifact will be deployed.
+        type: string
+        required: true
+      use_private_agent:
+        description: Use a private agent to deploy the built artifact.
+        type: boolean
+        required: false
+        default: true
+
+env:
+  BUNDLE_NAME: bundle
+
+concurrency:
+  group: ${{ github.workflow }}-cd
+  cancel-in-progress: true
+
+jobs:
+  migrate:
+    runs-on: ${{ inputs.use_private_agent == true && 'self-hosted' || 'ubuntu-22.04' }}
+    environment: ${{ inputs.environment }}-cd
+    permissions:
+      id-token: write
+      contents: read
+    # services:
+    #   docker:
+    #     image: docker:27.2.1-dind
+    #     options: --privileged
+    container: 
+      image: node:18 
+      env: 
+        NODE_ENV: development 
+      ports: 
+        - 80 
+      volumes: 
+        - my_docker_volume:/volume_mount 
+      options: --cpus 1 
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+      - name: Check for dockerenv file 
+        run: (ls /.dockerenv && echo Found dockerenv) || (echo No dockerenv) 
+
+      - name: Migrate DB Schema
+        run: |-
+          set -e
+          ./scripts/run_flyway_on_azure.sh migrate db PROD-IO schema/migrations "${{ env.SCHEMA_NAME }}" \
+            && echo "Migration successful" \
+            || { echo "Migration failed"; exit 1; }
+        shell: bash
+        env:
+          # THIS IS THE PRODUCTION SCHEMA NAME, SO PLEASE DON'T CHANGE IT
+          SCHEMA_NAME: DeveloperPortalServiceData
