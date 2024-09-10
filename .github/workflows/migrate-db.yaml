@@ -22,22 +22,25 @@ jobs:
     runs-on: ${{ inputs.use_private_agent == true && 'self-hosted' || 'ubuntu-22.04' }}
     environment: ${{ inputs.environment }}-cd
     permissions:
-      id-token: write
       contents: read
-    services:
-      docker:
-        image: docker:27.2.1-dind
-        options: --privileged
-        ports:
-          - 2375:2375
 
     steps:
       - name: checkout
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
-      - name: Start Docker daemon
+      - name: Install Docker
         run: |
-          docker info || { echo 'Docker is not running'; exit 1; }
+          apt-get update
+          apt-get install -y docker.io
+          systemctl start docker
+          ystemctl enable docker
+
+      - name: Verify Docker Installation
+        run: docker --version
+
+      - name: Run Docker Command
+        run: |
+          docker run hello-world
 
       - name: Migrate DB Schema
         run: |-
