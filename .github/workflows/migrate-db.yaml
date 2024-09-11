@@ -7,11 +7,6 @@ on:
         description: Environment where the artifact will be deployed.
         type: string
         required: true
-      use_private_agent:
-        description: Use a private agent to deploy the built artifact.
-        type: boolean
-        required: false
-        default: true
 
 concurrency:
   group: ${{ github.workflow }}-cd
@@ -19,7 +14,7 @@ concurrency:
 
 jobs:
   migrate:
-    runs-on: [self-hosted, ubuntu-22.04] #${{ inputs.use_private_agent == true && 'self-hosted' || 'ubuntu-22.04' }}
+    runs-on: [self-hosted, linux]
     environment: ${{ inputs.environment }}-cd
 
     steps:
